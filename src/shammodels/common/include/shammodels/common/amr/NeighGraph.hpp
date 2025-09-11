@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file NeighGraph.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -104,17 +104,17 @@ namespace shammodels::basegodunov::modules {
 
     using AMRGraph = NeighGraph;
 
+    enum Direction {
+        xp = 0,
+        xm = 1,
+        yp = 2,
+        ym = 3,
+        zp = 4,
+        zm = 5,
+    };
+
     template<class Tvec, class TgridVec>
     struct OrientedAMRGraph {
-
-        enum Direction {
-            xp = 0,
-            xm = 1,
-            yp = 2,
-            ym = 3,
-            zp = 4,
-            zm = 5,
-        };
 
         const std::array<TgridVec, 6> offset_check{
             TgridVec{1, 0, 0},

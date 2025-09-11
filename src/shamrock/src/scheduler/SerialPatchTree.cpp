@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -9,7 +9,7 @@
 
 /**
  * @file SerialPatchTree.cpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  */
 
@@ -170,13 +170,13 @@ void SerialPatchTree<f32_3>::build_from_patch_tree(
     for (u64 root_id : ptree.roots_id) {
         root_count++;
         roots_ids.push_back(cnt);
-        logger::debug_ln("Serial Patch Tree", "get serial tree fp32 root id :", root_id);
+        shamlog_debug_ln("Serial Patch Tree", "get serial tree fp32 root id :", root_id);
         get_serial_tree<f32_3>(
             root_id, ptree, serial_tree, linked_patch_ids, cnt, level_count, box_transform);
     }
 
-    logger::debug_ln("Serial Patch Tree", "tree cell count = ", serial_tree.size());
-    logger::debug_ln("Serial Patch Tree", "level_count =", level_count);
+    shamlog_debug_ln("Serial Patch Tree", "tree cell count = ", serial_tree.size());
+    shamlog_debug_ln("Serial Patch Tree", "level_count =", level_count);
 }
 
 template<>
@@ -191,8 +191,8 @@ void SerialPatchTree<f64_3>::build_from_patch_tree(
         get_serial_tree<f64_3>(
             root_id, ptree, serial_tree, linked_patch_ids, cnt, level_count, box_transform);
     }
-    logger::debug_ln("Serial Patch Tree", "tree cell count = ", serial_tree.size());
-    logger::debug_ln("Serial Patch Tree", "level_count =", level_count);
+    shamlog_debug_ln("Serial Patch Tree", "tree cell count = ", serial_tree.size());
+    shamlog_debug_ln("Serial Patch Tree", "level_count =", level_count);
 }
 
 template<>
@@ -207,6 +207,6 @@ void SerialPatchTree<i64_3>::build_from_patch_tree(
         get_serial_tree<i64_3>(
             root_id, ptree, serial_tree, linked_patch_ids, cnt, level_count, box_transform);
     }
-    logger::debug_ln("Serial Patch Tree", "tree cell count = ", serial_tree.size());
-    logger::debug_ln("Serial Patch Tree", "level_count =", level_count);
+    shamlog_debug_ln("Serial Patch Tree", "tree cell count = ", serial_tree.size());
+    shamlog_debug_ln("Serial Patch Tree", "level_count =", level_count);
 }

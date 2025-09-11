@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -199,7 +199,7 @@ TestStart(Benchmark, "shamalgs/memory/SerializeHelper:benchmark", bench_serializ
         std::vector<f64> tser_usz, tdeser_usz;
 
         for (u32 i = 1; i < 10000; i *= 2) {
-            logger::debug_ln("Test", "i =", i);
+            shamlog_debug_ln("Test", "i =", i);
 
             auto [p1, p2] = get_perf_knownsize(i, 100);
             auto [p3, p4] = get_perf_unknownsize(i, 100);
@@ -259,7 +259,7 @@ TestStart(Benchmark, "shamalgs/memory/SerializeHelper:benchmark", bench_serializ
         std::vector<f64> tser_usz, tdeser_usz;
 
         for (u32 i = 8; i < 10000; i *= 2) {
-            logger::debug_ln("Test", "i =", i);
+            shamlog_debug_ln("Test", "i =", i);
 
             auto [p1, p2] = get_perf_knownsize(1000, i);
             auto [p3, p4] = get_perf_unknownsize(1000, i);

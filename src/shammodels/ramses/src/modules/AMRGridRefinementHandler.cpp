@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -9,12 +9,13 @@
 
 /**
  * @file AMRGridRefinementHandler.cpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
 
 #include "shammodels/ramses/modules/AMRGridRefinementHandler.hpp"
+#include "shamalgs/details/algorithm/algorithm.hpp"
 #include "shamcomm/logs.hpp"
 #include "shammodels/ramses/modules/AMRSortBlocks.hpp"
 #include <stdexcept>
@@ -32,7 +33,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
     u64 tot_refine   = 0;
     u64 tot_derefine = 0;
 
-    scheduler().for_each_patchdata_nonempty([&](Patch cur_p, PatchData &pdat) {
+    scheduler().for_each_patchdata_nonempty([&](Patch cur_p, PatchDataLayer &pdat) {
         sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
 
         u64 id_patch = cur_p.id_patch;
@@ -120,7 +121,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
         auto [buf_refine, len_refine]
             = shamalgs::numeric::stream_compact(q.q, refine_flags, obj_cnt);
 
-        logger::debug_ln("AMRGrid", "patch ", id_patch, "refine block count = ", len_refine);
+        shamlog_debug_ln("AMRGrid", "patch ", id_patch, "refine block count = ", len_refine);
 
         tot_refine += len_refine;
 
@@ -135,7 +136,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
         auto [buf_derefine, len_derefine]
             = shamalgs::numeric::stream_compact(q.q, derefine_flags, obj_cnt);
 
-        logger::debug_ln("AMRGrid", "patch ", id_patch, "merge block count = ", len_derefine);
+        shamlog_debug_ln("AMRGrid", "patch ", id_patch, "merge block count = ", len_derefine);
 
         tot_derefine += len_derefine;
 
@@ -156,7 +157,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
 
     u64 sum_block_count = 0;
 
-    scheduler().for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchData &pdat) {
+    scheduler().for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchDataLayer &pdat) {
         sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
 
         u32 old_obj_cnt = pdat.get_obj_cnt();
@@ -241,7 +242,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
 
     using namespace shamrock::patch;
 
-    scheduler().for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchData &pdat) {
+    scheduler().for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchDataLayer &pdat) {
         sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
 
         u32 old_obj_cnt = pdat.get_obj_cnt();
@@ -320,7 +321,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
             auto [opt_buf, len]
                 = shamalgs::numeric::stream_compact(q.q, keep_block_flag, old_obj_cnt);
 
-            logger::debug_ln(
+            shamlog_debug_ln(
                 "AMR Grid", "patch", id_patch, "derefine block count ", old_obj_cnt, "->", len);
 
             if (!opt_buf) {
@@ -379,14 +380,14 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
             sham::EventList &depends_list,
             u64 id_patch,
             shamrock::patch::Patch p,
-            shamrock::patch::PatchData &pdat,
+            shamrock::patch::PatchDataLayer &pdat,
             Tscal dxfact,
             Tscal wanted_mass)
             : dxfact(dxfact), wanted_mass(wanted_mass) {
 
             block_low_bound  = pdat.get_field<TgridVec>(0).get_buf().get_read_access(depends_list);
             block_high_bound = pdat.get_field<TgridVec>(1).get_buf().get_read_access(depends_list);
-            block_density_field = pdat.get_field<Tscal>(pdat.pdl.get_field_idx<Tscal>("rho"))
+            block_density_field = pdat.get_field<Tscal>(pdat.pdl().get_field_idx<Tscal>("rho"))
                                       .get_buf()
                                       .get_read_access(depends_list);
         }
@@ -395,7 +396,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
             sham::EventList &resulting_events,
             u64 id_patch,
             shamrock::patch::Patch p,
-            shamrock::patch::PatchData &pdat,
+            shamrock::patch::PatchDataLayer &pdat,
             Tscal dxfact,
             Tscal wanted_mass) {
 
@@ -404,7 +405,7 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
 
             buf_cell_low_bound.complete_event_state(resulting_events);
             buf_cell_high_bound.complete_event_state(resulting_events);
-            pdat.get_field<Tscal>(pdat.pdl.get_field_idx<Tscal>("rho"))
+            pdat.get_field<Tscal>(pdat.pdl().get_field_idx<Tscal>("rho"))
                 .get_buf()
                 .complete_event_state(resulting_events);
         }
@@ -449,14 +450,14 @@ void shammodels::basegodunov::modules::AMRGridRefinementHandler<Tvec, TgridVec>:
         f64_3 *rho_vel;
         f64 *rhoE;
 
-        RefineCellAccessor(sham::EventList &depends_list, shamrock::patch::PatchData &pdat) {
+        RefineCellAccessor(sham::EventList &depends_list, shamrock::patch::PatchDataLayer &pdat) {
 
             rho     = pdat.get_field<f64>(2).get_buf().get_write_access(depends_list);
             rho_vel = pdat.get_field<f64_3>(3).get_buf().get_write_access(depends_list);
             rhoE    = pdat.get_field<f64>(4).get_buf().get_write_access(depends_list);
         }
 
-        void finalize(sham::EventList &resulting_events, shamrock::patch::PatchData &pdat) {
+        void finalize(sham::EventList &resulting_events, shamrock::patch::PatchDataLayer &pdat) {
             pdat.get_field<f64>(2).get_buf().complete_event_state(resulting_events);
             pdat.get_field<f64_3>(3).get_buf().complete_event_state(resulting_events);
             pdat.get_field<f64>(4).get_buf().complete_event_state(resulting_events);

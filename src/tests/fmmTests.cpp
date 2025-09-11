@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -238,22 +238,23 @@ TestStart(ValidationTest, "models/generic/fmm/precision", fmm_prec, 1) {
 
         f64 angle = 2 * (dist_func(x_i, s_a) + dist_func(x_j, s_b)) / dist_func(s_a, s_b);
 
-        vec_result.push_back(Entry{
-            angle,
-            FMM_prec_eval<f64, 5>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 4>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 3>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 2>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 1>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 0>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 5>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 4>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 3>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 2>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
-            FMM_prec_eval<f64, 1>::eval_prec_fmm_force(x_i, x_j, s_a, s_b)});
+        vec_result.push_back(
+            Entry{
+                angle,
+                FMM_prec_eval<f64, 5>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 4>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 3>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 2>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 1>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 0>::eval_prec_fmm_pot(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 5>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 4>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 3>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 2>::eval_prec_fmm_force(x_i, x_j, s_a, s_b),
+                FMM_prec_eval<f64, 1>::eval_prec_fmm_force(x_i, x_j, s_a, s_b)});
 
         if (i % 10000 == 0) {
-            logger::debug_ln("Tests", "i =", i, "\\", 100000);
+            shamlog_debug_ln("Tests", "i =", i, "\\", 100000);
         }
     }
 
@@ -563,11 +564,11 @@ Result_nompi_fmm_testing<flt, morton_mode, fmm_order> nompi_fmm_testing(
     u32 num_component_multipoles_fmm
         = (rtree.tree_struct.internal_cell_count + rtree.tree_reduced_morton_codes.tree_leaf_count)
           * SymTensorCollection<flt, 0, fmm_order>::num_component;
-    logger::debug_ln(
+    shamlog_debug_ln(
         "RTreeFMM", "allocating", num_component_multipoles_fmm, "component for multipoles");
     auto grav_multipoles = std::make_unique<sycl::buffer<flt>>(num_component_multipoles_fmm);
 
-    logger::debug_ln(
+    shamlog_debug_ln(
         "RTreeFMM",
         "computing leaf moments (",
         rtree.tree_reduced_morton_codes.tree_leaf_count,
@@ -635,7 +636,7 @@ Result_nompi_fmm_testing<flt, morton_mode, fmm_order> nompi_fmm_testing(
         });
     });
 
-    logger::debug_ln("RTreeFMM", "iterating moment cascade");
+    shamlog_debug_ln("RTreeFMM", "iterating moment cascade");
     for (u32 iter = 0; iter < rtree.tree_depth; iter++) {
 
         shamsys::instance::get_compute_queue().submit([&](sycl::handler &cgh) {
@@ -702,7 +703,7 @@ Result_nompi_fmm_testing<flt, morton_mode, fmm_order> nompi_fmm_testing(
         });
     }
 
-    logger::debug_ln("RTreeFMM", "computing cell infos");
+    shamlog_debug_ln("RTreeFMM", "computing cell infos");
     std::unique_ptr<sycl::buffer<vec>> cell_centers = std::make_unique<sycl::buffer<vec>>(
         rtree.tree_struct.internal_cell_count + rtree.tree_reduced_morton_codes.tree_leaf_count);
     std::unique_ptr<sycl::buffer<flt>> cell_length = std::make_unique<sycl::buffer<flt>>(
@@ -885,7 +886,7 @@ Result_nompi_fmm_testing<flt, morton_mode, fmm_order> nompi_fmm_testing(
 
     // #if false
 
-    logger::debug_ln("RTreeFMM", "walking");
+    shamlog_debug_ln("RTreeFMM", "walking");
     shamsys::instance::get_compute_queue().submit([&](sycl::handler &cgh) {
         using Rta = walker::Radix_tree_accessor<morton_mode, vec>;
         Rta tree_acc(rtree, cgh);
@@ -1510,10 +1511,10 @@ void run_test_no_mpi_fmm(std::string dset_name) {
     };
 
     f64 Nmax = get_max_part();
-    logger::debug_ln("Benchmark FMM", "Nmax =", Nmax);
+    shamlog_debug_ln("Benchmark FMM", "Nmax =", Nmax);
 
     for (f64 cnt = 1000; cnt <= Nmax; cnt *= 1.5) {
-        logger::debug_ln("Benchmark FMM", "cnt =", cnt);
+        shamlog_debug_ln("Benchmark FMM", "cnt =", cnt);
 
         auto pos_part = pos_partgen_distrib<flt>(u32(cnt));
         Npart.push_back(u32(cnt));

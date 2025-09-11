@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -108,7 +108,7 @@ void wrapper_bench_key_sort(std::string name) {
     std::vector<f64> results;
 
     for (const f64 &sz : test_sz) {
-        logger::debug_ln("ShamrockTest", "N=", sz);
+        shamlog_debug_ln("ShamrockTest", "N=", sz);
         results.push_back(benchmark_key_pair_sort<u_morton, impl>(sz));
     }
 

@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file interf_impl_util.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -143,7 +143,7 @@ namespace impl {
             const u64 &local_pcount  = gen.local_pcount;
             const u64 &global_pcount = gen.global_pcount;
 
-            logger::debug_sycl_ln(
+            shamlog_debug_sycl_ln(
                 "InterfaceFinder",
                 "searching interfaces offset=",
                 test_patch_offset,

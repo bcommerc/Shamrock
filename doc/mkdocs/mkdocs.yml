@@ -3,7 +3,7 @@ site_name: Shamrock
 repo_url: https://github.com/Shamrock-code/Shamrock
 repo_name: Shamrock
 
-copyright: Copyright (c) 2021-2024 Timothée David--Cléris
+copyright: Copyright (c) 2021-2025 Timothée David--Cléris
 
 nav:
   - 'Mkdocs documentation': 'index.md'
@@ -24,6 +24,10 @@ nav:
       - 'Install (Spack)' : 'usermanual/quickstart/install_spack.md'
       - 'Install (Homebrew)' : 'usermanual/quickstart/install_brew.md'
       - 'Install (Docker)' : 'usermanual/quickstart/install_docker.md'
+      - 'Recommended Configurations' :
+        - 'Linux' : 'usermanual/quickstart/recommended_config/linux_debian.md'
+        - 'macOS' : 'usermanual/quickstart/recommended_config/macos.md'
+        - 'Conda' : 'usermanual/quickstart/recommended_config/conda.md'
     - 'Environments' : 'usermanual/envs.md'
     - 'Usage' : 'usermanual/usage.md'
     - 'Shamrock as python lib' : 'usermanual/python_lib.md'
@@ -31,9 +35,6 @@ nav:
     - 'Configuration' : 'usermanual/configuration.md'
     - 'Utilities' : 'usermanual/utilities.md'
     - 'Running on clusters' : 'usermanual/cluster.md'
-    - 'Specific clusters' :
-      - 'PSMN' : 'usermanual/clusters/psmn.md'
-      - 'Adastra' : 'usermanual/clusters/adastra.md'
     - 'CUDA aware openMPI' : 'usermanual/openmpi_setup.md'
     - 'Plotting' : 'usermanual/plotting.md'
 
@@ -45,6 +46,7 @@ nav:
   - 'Develloper Doc' :
     - 'Git guide' : 'devdoc/git_guide.md'
     - 'VSCode setup' : 'devdoc/vscode-setup.md'
+    - 'Documentation' : 'devdoc/building_the_doc.md'
     - 'Release process' : 'devdoc/release_process.md'
     - 'Using the logs' : 'devdoc/log_system.md'
     - 'Local LLVM' : 'devdoc/using_local_llvm.md'
@@ -61,6 +63,7 @@ nav:
     - 'PatchData' : 'devdoc/scheduler/patchdata.md'
     - 'PatchList' : 'devdoc/scheduler/patchlist.md'
     - 'PatchTree' : 'devdoc/scheduler/patchtree.md'
+    - 'SolverGraph Migration' : 'devdoc/solvergraph_migration_guide.md'
 
   - 'Sycl guide' :
 

@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,6 +11,10 @@
 
 /**
  * @file SolverConfig.hpp
+ * @author Anass Serhani (anass.serhani@cnrs.fr)
+ * @author Benoit Commercon (benoit.commercon@ens-lyon.fr)
+ * @author Léodasce Sewanou (leodasce.sewanou@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @author Yona Lapeyre (yona.lapeyre@ens-lyon.fr)
  * @brief
  *
@@ -92,7 +96,7 @@ namespace shammodels::basegodunov {
         NoGravity = 0,
         CG        = 1, // conjuguate gradient
         PCG       = 2, // preconditioned conjuguate gradient
-        BIGSTAB   = 3, // bigstab
+        BICGSTAB  = 3, // bicgstab
         MULTIGRID = 4  // multigrid
     };
 
@@ -211,8 +215,8 @@ struct shammodels::basegodunov::SolverConfig {
     inline bool is_boundary_periodic() { return true; }
     GravityConfig<Tvec> gravity_config{};
     inline Tscal get_constant_4piG() {
-        gravity_config.G_value = get_constant_G();
-        return gravity_config.get_fourPiG();
+        auto scal_G = get_constant_G();
+        return 4 * M_PI * scal_G;
     }
     inline Tscal get_grav_tol() { return gravity_config.get_tolerance(); }
     inline bool is_gravity_on() { return gravity_config.is_gravity_on(); }
@@ -280,6 +284,11 @@ struct shammodels::basegodunov::SolverConfig {
                     "NoGravity mode)",
                     mode));
             }
+        }
+
+        if (!(eos_gamma > 1.0)) {
+            shambase::throw_with_loc<std::invalid_argument>(
+                shambase::format("Gamma must be > 1, currently Gamma = {}", eos_gamma));
         }
 
         if (is_gas_passive_scalar_on()) {

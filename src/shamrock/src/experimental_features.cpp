@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -9,16 +9,16 @@
 
 /**
  * @file experimental_features.cpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
 
-#include "shamrock/experimental_features.hpp"
+#include "shambase/term_colors.hpp"
 #include "shamcmdopt/env.hpp"
-#include "shamcmdopt/term_colors.hpp"
 #include "shamcomm/logs.hpp"
 #include "shamcomm/worldInfo.hpp"
+#include "shamrock/experimental_features.hpp"
 
 namespace {
     bool _env_allow_experimental_features
@@ -49,5 +49,7 @@ namespace shamrock {
 
         return _env_allow_experimental_features;
     }
+
+    void enable_experimental_features() { _env_allow_experimental_features = true; }
 
 } // namespace shamrock

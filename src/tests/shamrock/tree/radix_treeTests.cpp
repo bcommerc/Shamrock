@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -12,7 +12,7 @@
 #include "shamalgs/memory.hpp"
 #include "shamalgs/random.hpp"
 #include "shamrock/legacy/patch/base/patchdata.hpp"
-#include "shamrock/patch/PatchDataLayout.hpp"
+#include "shamrock/patch/PatchDataLayerLayout.hpp"
 #include "shamtest/shamtest.hpp"
 #include "shamtree/RadixTree.hpp"
 #include <vector>
@@ -31,7 +31,7 @@ Test_start("radix_tree",test_new_pfield_compute,1){
 
     constexpr u32 npart = 1000;
 
-    PatchDataLayout pdl;
+    PatchDataLayerLayout pdl;
     pdl.add_field<vec>("xyz", 1);
     pdl.add_field<flt>("h", 1);
 
@@ -106,7 +106,7 @@ Test_start("radix_tree",test_new_pfield_compute,1){
 
 
     auto compute_old = [&]() -> auto {
-        logger::debug_sycl_ln("RadixTree", "compute int boxes");
+        shamlog_debug_sycl_ln("RadixTree", "compute int boxes");
 
         auto buf_cell_interact_rad = std::make_unique<sycl::buffer<flt>>(rtree.tree_internal_count + rtree.tree_leaf_count);
         sycl::range<1> range_leaf_cell{rtree.tree_leaf_count};
@@ -227,7 +227,7 @@ Bench_start("tree field old compute performance", "treefieldcomputeperf_new", tr
         std::uniform_real_distribution<flt> distf(-1, 1);
 
 
-        PatchDataLayout pdl;
+        PatchDataLayerLayout pdl;
         pdl.add_field<vec>("xyz", 1);
         pdl.add_field<flt>("h", 1);
 
@@ -345,7 +345,7 @@ void test_tree_comm(TestResults &__test_result_ref){
 
     constexpr u32 npart = 1000;
 
-    PatchDataLayout pdl;
+    PatchDataLayerLayout pdl;
     pdl.add_field<vec>("xyz", 1);
 
     const auto id_xyz = pdl.get_field_idx<vec>("xyz");
@@ -448,7 +448,7 @@ Test_start("radix_tree", tree_cut, 1){
 
     constexpr u32 npart = 1000;
 
-    PatchDataLayout pdl;
+    PatchDataLayerLayout pdl;
     pdl.add_field<vec>("xyz", 1);
 
     const auto id_xyz = pdl.get_field_idx<vec>("xyz");
@@ -496,7 +496,7 @@ Test_start("radix_tree", tree_cut, 1){
 
 
     {
-        logger::debug_sycl_ln("Radixtree", "valid_node_state");
+        shamlog_debug_sycl_ln("Radixtree", "valid_node_state");
         rtree.print_tree_field(node_id_old);
         logger::raw_ln("");
     }
@@ -511,7 +511,7 @@ Test_start("radix_tree", tree_cut, 1){
     u32 total_count             = rtree.tree_internal_count + rtree.tree_leaf_count;
     sycl::range<1> range_tree{total_count};
 
-    logger::debug_sycl_ln("Radixtree", "computing valid node buf");
+    shamlog_debug_sycl_ln("Radixtree", "computing valid node buf");
 
     auto init_valid_buf = [&]() -> sycl::buffer<u8> {
 
@@ -726,7 +726,7 @@ inline void test_tree(std::string dset_name) {
     std::vector<f64> Npart;
 
     for (f64 cnt = 1000; cnt < Nmax; cnt *= 1.1) {
-        logger::debug_ln("TestTreePerf", cnt);
+        shamlog_debug_ln("TestTreePerf", cnt);
         shamsys::instance::get_compute_queue().wait();
         shambase::Timer timer;
         timer.start();

@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -9,7 +9,7 @@
 
 /**
  * @file fallbackMemory.cpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -88,7 +88,8 @@ namespace shamalgs::memory::details {
     X(u64_4)                                                                                       \
     X(u64_8)                                                                                       \
     X(u64_16)                                                                                      \
-    X(i64_3)
+    X(i64_3)                                                                                       \
+    X(i64)
 
 #define X(_arg_) template struct Fallback<_arg_>;
     XMAC_TYPES

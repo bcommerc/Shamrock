@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -13,7 +13,7 @@
 
 /**
  * @file smoothing_lenght.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -21,7 +21,7 @@
 #include "shamrock/legacy/patch/base/patchdata.hpp"
 #include "shamrock/legacy/patch/interfaces/interface_handler.hpp"
 #include "shamrock/legacy/patch/interfaces/interface_selector.hpp"
-#include "shamrock/patch/PatchDataLayout.hpp"
+#include "shamrock/patch/PatchDataLayerLayout.hpp"
 // #include "shamrock/legacy/patch/patchdata_buffer.hpp"
 #include "shammodels/sph/legacy/algs/smoothing_length_impl.hpp"
 #include "shamrock/legacy/patch/utility/merged_patch.hpp"
@@ -51,7 +51,7 @@ namespace models::sph {
 
             public:
             SmoothinglengthCompute(
-                shamrock::patch::PatchDataLayout &pdl, f32 htol_up_tol, f32 htol_up_iter) {
+                shamrock::patch::PatchDataLayerLayout &pdl, f32 htol_up_tol, f32 htol_up_iter) {
 
                 ixyz   = pdl.get_field_idx<vec>("xyz");
                 ihpart = pdl.get_field_idx<flt>("hpart");
@@ -242,10 +242,10 @@ namespace models::sph {
             constexpr u32 reduc_level = 5;
 
             sched.for_each_patch([&](u64 id_patch, Patch /*cur_p*/) {
-                logger::debug_ln("SPHLeapfrog", "patch : n°", id_patch, "->", "making Radix Tree");
+                shamlog_debug_ln("SPHLeapfrog", "patch : n°", id_patch, "->", "making Radix Tree");
 
                 if (merge_pdat.at(id_patch).or_element_cnt == 0)
-                    logger::debug_ln(
+                    shamlog_debug_ln(
                         "SPHLeapfrog",
                         "patch : n°",
                         id_patch,
@@ -269,10 +269,10 @@ namespace models::sph {
             });
 
             sched.for_each_patch([&](u64 id_patch, Patch /*cur_p*/) {
-                logger::debug_ln(
+                shamlog_debug_ln(
                     "SPHLeapfrog", "patch : n°", id_patch, "->", "compute radix tree cell volumes");
                 if (merge_pdat.at(id_patch).or_element_cnt == 0)
-                    logger::debug_ln(
+                    shamlog_debug_ln(
                         "SPHLeapfrog",
                         "patch : n°",
                         id_patch,
@@ -285,14 +285,14 @@ namespace models::sph {
             });
 
             sched.for_each_patch([&](u64 id_patch, Patch /*cur_p*/) {
-                logger::debug_ln(
+                shamlog_debug_ln(
                     "SPHLeapfrog",
                     "patch : n°",
                     id_patch,
                     "->",
                     "compute Radix Tree interaction boxes");
                 if (merge_pdat.at(id_patch).or_element_cnt == 0)
-                    logger::debug_ln(
+                    shamlog_debug_ln(
                         "SPHLeapfrog",
                         "patch : n°",
                         id_patch,
@@ -318,9 +318,9 @@ namespace models::sph {
 
             // iterate smoothing length
             sched.for_each_patch([&](u64 id_patch, Patch cur_p) {
-                logger::debug_ln("SPHLeapfrog", "patch : n°", id_patch, "->", "Init h iteration");
+                shamlog_debug_ln("SPHLeapfrog", "patch : n°", id_patch, "->", "Init h iteration");
                 if (merge_pdat.at(id_patch).or_element_cnt == 0)
-                    logger::debug_ln(
+                    shamlog_debug_ln(
                         "SPHLeapfrog",
                         "patch : n°",
                         id_patch,
@@ -335,7 +335,7 @@ namespace models::sph {
 
                 sycl::range range_npart{merge_pdat.at(id_patch).or_element_cnt};
 
-                logger::debug_ln(
+                shamlog_debug_ln(
                     "SPHLeapfrog",
                     "merging -> original size :",
                     merge_pdat.at(id_patch).or_element_cnt,

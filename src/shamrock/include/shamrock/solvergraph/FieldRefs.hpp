@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file FieldRefs.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -19,7 +19,7 @@
 #include "shambase/DistributedData.hpp"
 #include "shamrock/patch/PatchDataField.hpp"
 #include "shamrock/solvergraph/FieldSpan.hpp"
-#include "shamrock/solvergraph/IDataEdgeNamed.hpp"
+#include "shamrock/solvergraph/IEdgeNamed.hpp"
 #include "shamrock/solvergraph/IFieldRefs.hpp"
 #include <functional>
 
@@ -58,7 +58,9 @@ namespace shamrock::solvergraph {
                     shambase::throw_with_loc<std::runtime_error>(
                         "Missing field ref in distributed data at id " + std::to_string(id));
                 },
-                [](u64 id) {},
+                [](u64 id) {
+                    // TODO
+                },
                 [](u64 id) {
                     shambase::throw_with_loc<std::runtime_error>(
                         "Extra field ref in distributed data at id " + std::to_string(id));

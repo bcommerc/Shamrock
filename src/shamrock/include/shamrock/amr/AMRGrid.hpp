@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file AMRGrid.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -52,12 +52,12 @@ namespace shamrock::amr {
         void check_amr_main_fields() {
 
             bool correct_type = true;
-            correct_type &= sched.pdl.check_field_type<Tcoord>(0);
-            correct_type &= sched.pdl.check_field_type<Tcoord>(1);
+            correct_type &= sched.pdl().template check_field_type<Tcoord>(0);
+            correct_type &= sched.pdl().template check_field_type<Tcoord>(1);
 
             bool correct_names = true;
-            correct_names &= sched.pdl.get_field<Tcoord>(0).name == "cell_min";
-            correct_names &= sched.pdl.get_field<Tcoord>(1).name == "cell_max";
+            correct_names &= sched.pdl().template get_field<Tcoord>(0).name == "cell_min";
+            correct_names &= sched.pdl().template get_field<Tcoord>(1).name == "cell_max";
 
             if (!correct_type || !correct_names) {
                 throw std::runtime_error(
@@ -65,7 +65,7 @@ namespace shamrock::amr {
                     "    0 : cell_min : nvar=1 type : (Coordinate type)\n"
                     "    1 : cell_max : nvar=1 type : (Coordinate type)\n\n"
                     "the current layout is : \n"
-                    + sched.pdl.get_description_str());
+                    + sched.pdl().get_description_str());
             }
         }
 
@@ -73,22 +73,21 @@ namespace shamrock::amr {
 
         /**
          * @brief generate split lists for all patchdata owned by the node
-         * ~~~~~{.cpp}
-         *
+         * @code{.cpp}
          * auto split_lists = grid.gen_splitlists(
          *     [&](u64 id_patch, Patch cur_p, PatchData &pdat) -> sycl::buffer<u32> {
          *          generate the buffer saying which cells should split
          *     }
          * );
-         *
-         * ~~~~~
+         * @endcode
          *
          * @tparam Fct
          * @param f
          * @return shambase::DistributedData<SplitList>
          */
         shambase::DistributedData<OptIndexList> gen_refinelists_native(
-            std::function<void(u64, patch::Patch, patch::PatchData &, sycl::buffer<u32> &)> fct) {
+            std::function<void(u64, patch::Patch, patch::PatchDataLayer &, sycl::buffer<u32> &)>
+                fct) {
 
             shambase::DistributedData<OptIndexList> ret;
 
@@ -96,7 +95,7 @@ namespace shamrock::amr {
 
             u64 tot_refine = 0;
 
-            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchData &pdat) {
+            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchDataLayer &pdat) {
                 sycl::queue &q = shamsys::instance::get_compute_queue();
 
                 u32 obj_cnt = pdat.get_obj_cnt();
@@ -109,7 +108,7 @@ namespace shamrock::amr {
                 // perform stream compactions on the refinement flags
                 auto [buf, len] = shamalgs::numeric::stream_compact(q, refine_flags, obj_cnt);
 
-                logger::debug_ln("AMRGrid", "patch ", id_patch, "refine cell count = ", len);
+                shamlog_debug_ln("AMRGrid", "patch ", id_patch, "refine cell count = ", len);
 
                 tot_refine += len;
 
@@ -128,7 +127,7 @@ namespace shamrock::amr {
 
             return gen_refinelists_native([&](u64 id_patch,
                                               Patch p,
-                                              PatchData &pdat,
+                                              PatchDataLayer &pdat,
                                               sycl::buffer<u32> &refine_flags) {
                 sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
 
@@ -169,7 +168,7 @@ namespace shamrock::amr {
             using MortonBuilder = RadixTreeMortonBuilder<u64, Tcoord, 3>;
             using namespace shamrock::patch;
 
-            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchData &pdat) {
+            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchDataLayer &pdat) {
                 // return because no cell can be merged since
                 if (pdat.get_obj_cnt() < split_count) {
                     return;
@@ -194,7 +193,7 @@ namespace shamrock::amr {
 
                 u32 obj_to_check = pre_merge_obj_cnt - split_count + 1;
 
-                logger::debug_sycl_ln("AMR Grid", "checking mergeable in", obj_to_check, "cells");
+                shamlog_debug_sycl_ln("AMR Grid", "checking mergeable in", obj_to_check, "cells");
 
                 sycl::buffer<u32> mergeable_indexes(obj_to_check);
 
@@ -249,7 +248,7 @@ namespace shamrock::amr {
                 auto [opt_buf, len] = shamalgs::numeric::stream_compact(
                     shamsys::instance::get_compute_queue(), mergeable_indexes, obj_to_check);
 
-                logger::debug_ln("AMRGrid", "patch ", id_patch, "merge cell count = ", len);
+                shamlog_debug_ln("AMRGrid", "patch ", id_patch, "merge cell count = ", len);
 
                 tot_merge += len;
 
@@ -278,7 +277,7 @@ namespace shamrock::amr {
 
             u64 sum_cell_count = 0;
 
-            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchData &pdat) {
+            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchDataLayer &pdat) {
                 sycl::queue &q = shamsys::instance::get_compute_queue();
 
                 u32 old_obj_cnt = pdat.get_obj_cnt();
@@ -361,7 +360,7 @@ namespace shamrock::amr {
 
             using namespace patch;
 
-            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchData &pdat) {
+            sched.for_each_patch_data([&](u64 id_patch, Patch cur_p, PatchDataLayer &pdat) {
                 sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
 
                 u32 old_obj_cnt = pdat.get_obj_cnt();
@@ -445,7 +444,7 @@ namespace shamrock::amr {
                     auto [opt_buf, len]
                         = shamalgs::numeric::stream_compact(q.q, keep_cell_flag, old_obj_cnt);
 
-                    logger::debug_ln(
+                    shamlog_debug_ln(
                         "AMR Grid",
                         "patch",
                         id_patch,
@@ -489,7 +488,7 @@ namespace shamrock::amr {
                 gcd_cell_count = std::gcd(gcd_cell_count, gcd_pow2);
             }
 
-            logger::debug_ln(
+            shamlog_debug_ln(
                 "AMRGrid",
                 "patch grid :",
                 cell_count[0] / gcd_cell_count,
@@ -510,7 +509,7 @@ namespace shamrock::amr {
             sycl::buffer<Tcoord> cell_coord_min(cell_tot_count);
             sycl::buffer<Tcoord> cell_coord_max(cell_tot_count);
 
-            logger::debug_sycl_ln(
+            shamlog_debug_sycl_ln(
                 "AMRGrid", "building bounds ", cell_count[0], cell_count[1], cell_count[2]);
 
             {
@@ -542,7 +541,7 @@ namespace shamrock::amr {
 
             shambase::check_queue_state(shamsys::instance::get_compute_queue());
 
-            patch::PatchData pdat(sched.pdl);
+            patch::PatchDataLayer pdat(sched.get_layout_ptr());
             pdat.resize(cell_tot_count);
 
             shambase::check_queue_state(shamsys::instance::get_compute_queue());
@@ -557,7 +556,7 @@ namespace shamrock::amr {
 
             shambase::check_queue_state(shamsys::instance::get_compute_queue());
 
-            logger::debug_sycl_ln("AMRGrid", "grid init done");
+            shamlog_debug_sycl_ln("AMRGrid", "grid init done");
         }
     };
 

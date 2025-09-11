@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file MpiDataTypeHandler.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  */
 
@@ -33,7 +33,7 @@ namespace shamsys::mpidtypehandler {
         for (u32 i = 0; i < static_init_shamrock_mpidtype.size(); i++) {
             auto fct  = static_init_shamrock_mpidtype[i];
             auto name = static_init_shamrock_mpidtype_names[i];
-            logger::debug_mpi_ln("MpiDTypehandler", "initialising type :", name);
+            shamlog_debug_mpi_ln("MpiDTypehandler", "initialising type :", name);
             fct();
         }
     }
@@ -42,7 +42,7 @@ namespace shamsys::mpidtypehandler {
         for (u32 i = 0; i < static_free_shamrock_mpidtype.size(); i++) {
             auto fct  = static_free_shamrock_mpidtype[i];
             auto name = static_free_shamrock_mpidtype_names[i];
-            logger::debug_mpi_ln("MpiDTypehandler", "freeing type :", name);
+            shamlog_debug_mpi_ln("MpiDTypehandler", "freeing type :", name);
             fct();
         }
     }

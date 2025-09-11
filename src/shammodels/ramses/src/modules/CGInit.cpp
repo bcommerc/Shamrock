@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -10,6 +10,7 @@
 /**
  * @file CGInit.cpp
  * @author Léodasce Sewanou (leodasce.sewanou@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -27,6 +28,7 @@
 using AMRGraphLinkiterator = shammodels::basegodunov::modules::AMRGraph::ro_access;
 
 namespace {
+    using Direction = shammodels::basegodunov::modules::Direction;
 
     /**
      * @brief Get the discretized laplacian
@@ -100,18 +102,18 @@ namespace {
                     auto &phi_res_span    = edges.spans_phi_res.get_spans().get(id);
                     auto &phi_p_span      = edges.spans_phi_p.get_spans().get(id);
 
-                    AMRGraph &graph_neigh_xp = shambase::get_check_ref(
-                        oriented_cell_graph.graph_links[oriented_cell_graph.xp]);
-                    AMRGraph &graph_neigh_xm = shambase::get_check_ref(
-                        oriented_cell_graph.graph_links[oriented_cell_graph.xm]);
-                    AMRGraph &graph_neigh_yp = shambase::get_check_ref(
-                        oriented_cell_graph.graph_links[oriented_cell_graph.yp]);
-                    AMRGraph &graph_neigh_ym = shambase::get_check_ref(
-                        oriented_cell_graph.graph_links[oriented_cell_graph.ym]);
-                    AMRGraph &graph_neigh_zp = shambase::get_check_ref(
-                        oriented_cell_graph.graph_links[oriented_cell_graph.zp]);
-                    AMRGraph &graph_neigh_zm = shambase::get_check_ref(
-                        oriented_cell_graph.graph_links[oriented_cell_graph.zm]);
+                    AMRGraph &graph_neigh_xp
+                        = shambase::get_check_ref(oriented_cell_graph.graph_links[Direction::xp]);
+                    AMRGraph &graph_neigh_xm
+                        = shambase::get_check_ref(oriented_cell_graph.graph_links[Direction::xm]);
+                    AMRGraph &graph_neigh_yp
+                        = shambase::get_check_ref(oriented_cell_graph.graph_links[Direction::yp]);
+                    AMRGraph &graph_neigh_ym
+                        = shambase::get_check_ref(oriented_cell_graph.graph_links[Direction::ym]);
+                    AMRGraph &graph_neigh_zp
+                        = shambase::get_check_ref(oriented_cell_graph.graph_links[Direction::zp]);
+                    AMRGraph &graph_neigh_zm
+                        = shambase::get_check_ref(oriented_cell_graph.graph_links[Direction::zm]);
 
                     sham::EventList depends_list;
 
@@ -132,7 +134,7 @@ namespace {
                     auto e               = q.submit(depends_list, [&](sycl::handler &cgh) {
                         u32 cell_count = (edges.sizes.indexes.get(id)) * block_size;
 
-                        shambase::parralel_for(cgh, cell_count, "init step for cg", [=](u64 gid) {
+                        shambase::parallel_for(cgh, cell_count, "init step for cg", [=](u64 gid) {
                             const u32 cell_global_id = (u32) gid;
                             const u32 block_id       = cell_global_id / block_size;
                             const u32 cell_loc_id    = cell_global_id % block_size;

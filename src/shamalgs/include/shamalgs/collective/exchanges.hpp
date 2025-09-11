@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file exchanges.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -99,55 +99,41 @@ namespace shamalgs::collective {
         const MPI_Comm comm) {
         StackEntry stack_loc{};
 
-        // if (shamcomm::world_rank() == 0) {
-        //     shamcomm::logs::info_ln("vector_allgatherv", "vector_allgatherv");
-        // }
-
         u32 local_count = send_vec.size();
-
-        // querry global size and resize the receiving vector
-        u32 global_len;
-        shamcomm::mpi::Allreduce(&local_count, &global_len, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-        recv_vec.resize(global_len);
-
-        // if (shamcomm::world_rank() == 0) {
-        //     shamcomm::logs::info_ln(
-        //         "vector_allgatherv", "vector_allgatherv global_len", global_len);
-        // }
 
         std::vector<int> table_data_count(shamcomm::world_size());
 
         shamcomm::mpi::Allgather(&local_count, 1, MPI_INT, &table_data_count[0], 1, MPI_INT, comm);
 
-        // printf("table_data_count =
-        // [%d,%d,%d,%d]\n",table_data_count[0],table_data_count[1],table_data_count[2],table_data_count[3]);
-
         std::vector<int> node_displacments_data_table(shamcomm::world_size());
-
         node_displacments_data_table[0] = 0;
-
         for (u32 i = 1; i < shamcomm::world_size(); i++) {
             node_displacments_data_table[i]
                 = node_displacments_data_table[i - 1] + table_data_count[i - 1];
         }
 
-        // if (shamcomm::world_rank() == 0) {
-        //     shamcomm::logs::info_ln(
-        //         "vector_allgatherv", "vector_allgatherv table_data_count", table_data_count);
-        //     shamcomm::logs::info_ln(
-        //         "vector_allgatherv",
-        //         "vector_allgatherv node_displacments_data_table",
-        //         node_displacments_data_table);
-        // }
+        u32 global_len = 0;
+        // use work duplication or MPI reduction
+#if false
+        // querry global size and resize the receiving vector
+        shamcomm::mpi::Allreduce(
+            &local_count, &global_len, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+#else
+        for (const u32 &v : table_data_count) {
+            global_len += v;
+        }
+#endif
+        recv_vec.resize(global_len);
 
-        // printf("node_displacments_data_table =
-        // [%d,%d,%d,%d]\n",node_displacments_data_table[0],node_displacments_data_table[1],node_displacments_data_table[2],node_displacments_data_table[3]);
+        if (global_len == 0) {
+            return;
+        }
 
         shamcomm::mpi::Allgatherv(
-            &send_vec[0],
+            send_vec.data(),
             send_vec.size(),
             send_type,
-            &recv_vec[0],
+            recv_vec.data(),
             &table_data_count[0],
             &node_displacments_data_table[0],
             recv_type,

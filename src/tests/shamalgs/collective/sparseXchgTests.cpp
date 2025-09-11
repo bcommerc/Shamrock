@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,6 +11,7 @@
 #include "shambase/string.hpp"
 #include "shamalgs/collective/sparseXchg.hpp"
 #include "shamalgs/memory.hpp"
+#include "shamalgs/primitives/equals.hpp"
 #include "shamalgs/random.hpp"
 #include "shamalgs/reduction.hpp"
 #include "shambackends/comm/CommunicationBuffer.hpp"
@@ -51,11 +52,12 @@ void sparse_comm_test(std::string prefix, std::shared_ptr<sham::DeviceScheduler>
 
         void add_element(std::mt19937 &eng, u32 wsize, u64 bytes) {
             u64 rnd = eng();
-            elements.push_back(RefBuff{
-                shamalgs::random::mock_value<i32>(eng, 0, wsize - 1),
-                shamalgs::random::mock_value<i32>(eng, 0, wsize - 1),
-                std::make_unique<sycl::buffer<u8>>(shamalgs::random::mock_buffer<u8>(
-                    rnd, shamalgs::random::mock_value<i32>(eng, 1, bytes)))});
+            elements.push_back(
+                RefBuff{
+                    shamalgs::primitives::mock_value<i32>(eng, 0, wsize - 1),
+                    shamalgs::primitives::mock_value<i32>(eng, 0, wsize - 1),
+                    std::make_unique<sycl::buffer<u8>>(shamalgs::random::mock_buffer<u8>(
+                        rnd, shamalgs::primitives::mock_value<i32>(eng, 1, bytes)))});
         }
 
         void sort_input() {
@@ -75,11 +77,17 @@ void sparse_comm_test(std::string prefix, std::shared_ptr<sham::DeviceScheduler>
 
     std::vector<SendPayload> sendop;
 
+    u32 idx = 0;
     for (RefBuff &bufinfo : tests.elements) {
         if (bufinfo.sender_rank == world_rank()) {
-            sendop.push_back(SendPayload{
-                bufinfo.receiver_rank,
-                std::make_unique<CommunicationBuffer>(*bufinfo.payload, qdet)});
+            sendop.push_back(
+                SendPayload{
+                    bufinfo.receiver_rank,
+                    std::make_unique<CommunicationBuffer>(*bufinfo.payload, qdet)});
+
+            REQUIRE_EQUAL(sendop[idx].payload->get_size(), bufinfo.payload->size());
+
+            idx++;
         }
     }
 
@@ -88,30 +96,33 @@ void sparse_comm_test(std::string prefix, std::shared_ptr<sham::DeviceScheduler>
 
     std::vector<RefBuff> recv_data;
     for (RecvPayload &load : recvop) {
-        recv_data.push_back(RefBuff{
-            load.sender_ranks,
-            wrank,
-            std::make_unique<sycl::buffer<u8>>(load.payload->copy_back())});
+        recv_data.push_back(
+            RefBuff{
+                load.sender_ranks,
+                wrank,
+                std::make_unique<sycl::buffer<u8>>(load.payload->copy_back())});
     }
 
     logger::raw_ln("ref data : ");
     for (RefBuff &ref : tests.elements) {
-        logger::raw_ln(shambase::format(
-            "[{:2}] {} -> {} ({})",
-            wrank,
-            ref.sender_rank,
-            ref.receiver_rank,
-            ref.payload->size()));
+        logger::raw_ln(
+            shambase::format(
+                "[{:2}] {} -> {} ({})",
+                wrank,
+                ref.sender_rank,
+                ref.receiver_rank,
+                ref.payload->size()));
     }
 
     logger::raw_ln("recv data : ");
     for (RefBuff &ref : recv_data) {
-        logger::raw_ln(shambase::format(
-            "[{:2}] {} -> {} ({})",
-            wrank,
-            ref.sender_rank,
-            ref.receiver_rank,
-            ref.payload->size()));
+        logger::raw_ln(
+            shambase::format(
+                "[{:2}] {} -> {} ({})",
+                wrank,
+                ref.sender_rank,
+                ref.receiver_rank,
+                ref.payload->size()));
     }
 
     u32 ref_idx = 0;
@@ -125,9 +136,14 @@ void sparse_comm_test(std::string prefix, std::shared_ptr<sham::DeviceScheduler>
                 REQUIRE_EQUAL_NAMED(prefix + "same sender", recv_buf.sender_rank, ref.sender_rank);
                 REQUIRE_EQUAL_NAMED(
                     prefix + "same receiver", recv_buf.receiver_rank, ref.receiver_rank);
+
+                REQUIRE_EQUAL_NAMED(
+                    prefix + "same buf size",
+                    ref.payload->get_size(),
+                    recv_buf.payload->get_size());
                 REQUIRE_NAMED(
                     prefix + "same buffer",
-                    shamalgs::reduction::equals_ptr(
+                    shamalgs::primitives::equals_ptr(
                         get_compute_queue(), ref.payload, recv_buf.payload));
 
             } else {

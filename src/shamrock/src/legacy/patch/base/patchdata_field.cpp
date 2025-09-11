@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -9,7 +9,7 @@
 
 /**
  * @file patchdata_field.cpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -37,7 +37,7 @@ namespace patchdata_field {
         : comm_mode(comm_mode), comm_op(comm_op), comm_val_cnt(comm_val_cnt),
           pdat_field(pdat_field) {
 
-        logger::debug_mpi_ln(
+        shamlog_debug_mpi_ln(
             "PatchDataField MPI Comm",
             "starting mpi sycl comm ",
             comm_val_cnt,
@@ -76,7 +76,7 @@ namespace patchdata_field {
     template<class T>
     void PatchDataFieldMpiRequest<T>::finalize() {
 
-        logger::debug_mpi_ln(
+        shamlog_debug_mpi_ln(
             "PatchDataField MPI Comm",
             "finalizing mpi sycl comm ",
             comm_val_cnt,

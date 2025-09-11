@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -9,7 +9,7 @@
 
 /**
  * @file HilbertLoadBalance.cpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief implementation of the hilbert curve load balancing
  *
  */
@@ -119,7 +119,7 @@ namespace shamrock::scheduler {
                 load_per_node[new_owner_table[i]] += global_patch_list[i].load_value;
             }
 
-            // logger::debug_ln("HilbertLoadBalance", "loads after balancing");
+            // shamlog_debug_ln("HilbertLoadBalance", "loads after balancing");
             f64 min = shambase::VectorProperties<f64>::get_inf();
             f64 max = -shambase::VectorProperties<f64>::get_inf();
             f64 avg = 0;
@@ -132,7 +132,7 @@ namespace shamrock::scheduler {
                 avg += val;
 
                 if (shamcomm::world_rank() == 0) {
-                    logger::debug_ln(
+                    shamlog_debug_ln(
                         "HilbertLoadBalance", "node :", nid, "load :", load_per_node[nid]);
                 }
             }

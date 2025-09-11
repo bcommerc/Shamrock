@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file SolverStorage.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  */
 
@@ -23,22 +23,30 @@
 #include "shammodels/common/amr/NeighGraph.hpp"
 #include "shammodels/common/amr/NeighGraphLinkField.hpp"
 #include "shammodels/ramses/GhostZoneData.hpp"
+#include "shammodels/ramses/modules/FindGhostLayerCandidates.hpp"
 #include "shammodels/ramses/modules/NodeBuildTrees.hpp"
-#include "shammodels/ramses/solvegraph/NeighGrapkLinkFieldEdge.hpp"
+#include "shammodels/ramses/solvegraph/NeighGraphLinkFieldEdge.hpp"
 #include "shammodels/ramses/solvegraph/OrientedAMRGraphEdge.hpp"
 #include "shammodels/ramses/solvegraph/TreeEdge.hpp"
 #include "shamrock/scheduler/ComputeField.hpp"
 #include "shamrock/scheduler/InterfacesUtility.hpp"
 #include "shamrock/scheduler/SerialPatchTree.hpp"
 #include "shamrock/scheduler/ShamrockCtx.hpp"
+#include "shamrock/solvergraph/DDSharedBuffers.hpp"
+#include "shamrock/solvergraph/DDSharedScalar.hpp"
 #include "shamrock/solvergraph/Field.hpp"
 #include "shamrock/solvergraph/FieldSpan.hpp"
 #include "shamrock/solvergraph/Indexes.hpp"
 #include "shamrock/solvergraph/OperationSequence.hpp"
+#include "shamrock/solvergraph/PatchDataLayerDDShared.hpp"
+#include "shamrock/solvergraph/PatchDataLayerEdge.hpp"
 #include "shamrock/solvergraph/ScalarEdge.hpp"
+#include "shamrock/solvergraph/ScalarsEdge.hpp"
+#include "shamrock/solvergraph/SolverGraph.hpp"
 #include "shamsys/legacy/log.hpp"
 #include "shamtree/RadixTree.hpp"
 #include "shamtree/TreeTraversalCache.hpp"
+#include <memory>
 
 namespace shammodels::basegodunov {
 
@@ -54,6 +62,14 @@ namespace shammodels::basegodunov {
         static constexpr u32 dim = shambase::VectorProperties<Tvec>::dimension;
 
         using RTree = RadixTree<Tmorton, TgridVec>;
+
+        shamrock::solvergraph::SolverGraph solver_graph;
+
+        std::shared_ptr<shamrock::solvergraph::IDataEdge<std::vector<u64>>> local_patch_ids;
+
+        std::shared_ptr<shamrock::solvergraph::ScalarsEdge<u32>> patch_rank_owner;
+
+        std::shared_ptr<shamrock::solvergraph::ScalarEdge<Tscal>> dt_over2;
 
         std::shared_ptr<shamrock::solvergraph::FieldRefs<TgridVec>> refs_block_min;
         std::shared_ptr<shamrock::solvergraph::FieldRefs<TgridVec>> refs_block_max;
@@ -110,87 +126,76 @@ namespace shammodels::basegodunov {
 
         Component<GhostZonesData<Tvec, TgridVec>> ghost_zone_infos;
 
-        Component<shamrock::patch::PatchDataLayout> ghost_layout;
+        std::shared_ptr<shamrock::patch::PatchDataLayerLayout> ghost_layout;
 
-        Component<shambase::DistributedData<shamrock::MergedPatchData>> merged_patchdata_ghost;
+        std::shared_ptr<shamrock::solvergraph::PatchDataLayerRefs> source_patches;
 
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> rho_face_xp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> rho_face_xm;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> rho_face_yp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> rho_face_ym;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> rho_face_zp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> rho_face_zm;
+        std::shared_ptr<shamrock::solvergraph::PatchDataLayerEdge> merged_patchdata_ghost;
 
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_face_xp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_face_xm;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_face_yp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_face_ym;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_face_zp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_face_zm;
+        std::shared_ptr<shamrock::solvergraph::PatchDataLayerDDShared> exchange_gz_edge;
 
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> press_face_xp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> press_face_xm;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> press_face_yp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> press_face_ym;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> press_face_zp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>> press_face_zm;
+        std::shared_ptr<shamrock::solvergraph::DDSharedScalar<modules::GhostLayerCandidateInfos>>
+            ghost_layers_candidates_edge;
 
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_face_xp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_face_xm;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_face_yp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_face_ym;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_face_zp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_face_zm;
+        std::shared_ptr<shamrock::solvergraph::ScalarEdge<shammath::AABB<TgridVec>>> sim_box_edge;
 
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_face_xp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_face_xm;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_face_yp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_face_ym;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_face_zp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_face_zm;
+        std::shared_ptr<shamrock::solvergraph::DDSharedBuffers<u32>> idx_in_ghost;
 
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rhoe_face_xp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rhoe_face_xm;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rhoe_face_yp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rhoe_face_ym;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rhoe_face_zp;
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rhoe_face_zm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> rho_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> rho_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> rho_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> rho_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> rho_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> rho_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> press_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> press_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> press_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> press_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> press_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> press_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rhoe_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rhoe_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rhoe_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rhoe_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rhoe_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rhoe_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_dust_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_dust_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_dust_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_dust_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_dust_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_rho_dust_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_zm;
 
         Component<shamrock::ComputeField<Tscal>> dtrho;
         Component<shamrock::ComputeField<Tvec>> dtrhov;
@@ -205,98 +210,26 @@ namespace shammodels::basegodunov {
         // next time step dust momentum before drag
         Component<shamrock::ComputeField<Tvec>> rhov_d_next_no_drag;
 
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>>
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
             rho_dust_face_xp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>>
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
             rho_dust_face_xm;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>>
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
             rho_dust_face_yp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>>
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
             rho_dust_face_ym;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>>
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
             rho_dust_face_zp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tscal, 2>>>
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
             rho_dust_face_zm;
 
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_xp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_xm;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_yp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_ym;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_zp;
-        std::shared_ptr<solvergraph::NeighGrapkLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_zm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_zm;
 
-        /**
-         * @brief dust density flux at cells interfaces in +x direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_dust_face_xp;
-        /**
-         * @brief dust density flux at cells interfaces in -x direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_dust_face_xm;
-        /**
-         * @brief dust density flux at cells interfaces in +y direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_dust_face_yp;
-        /**
-         * @brief dust density flux at cells interfaces in -y direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_dust_face_ym;
-        /**
-         * @brief dust density flux at cells interfaces in +z direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_dust_face_zp;
-        /**
-         * @brief dust density flux at cells interfaces in -z direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tscal>>>
-            flux_rho_dust_face_zm;
-        /**
-         * @brief dust momentum flux at cells interfaces in +x direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_dust_face_xp;
-        /**
-         * @brief dust momentum flux at cells interfaces in -x direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_dust_face_xm;
-        /**
-         * @brief dust momentum flux at cells interfaces in +y direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_dust_face_yp;
-        /**
-         * @brief dust momentum flux at cells interfaces in -y direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_dust_face_ym;
-        /**
-         * @brief dust momentum flux at cells interfaces in +z direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_dust_face_zp;
-        /**
-         * @brief dust momentum flux at cells interfaces in -z direction
-         */
-        Component<
-            shambase::DistributedData<shammodels::basegodunov::modules::NeighGraphLinkField<Tvec>>>
-            flux_rhov_dust_face_zm;
         // time derivative dust density
         Component<shamrock::ComputeField<Tscal>> dtrho_dust;
         // time derivative dust momemtum

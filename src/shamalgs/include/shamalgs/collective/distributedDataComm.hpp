@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,12 +11,13 @@
 
 /**
  * @file distributedDataComm.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
 
 #include "shambase/DistributedData.hpp"
+#include "shambase/DistributedDataShared.hpp"
 #include "shambase/stacktrace.hpp"
 #include "shamalgs/collective/exchanges.hpp"
 #include "shamalgs/collective/sparseXchg.hpp"
@@ -74,7 +75,7 @@ namespace shamalgs::collective {
             return deserialize(std::move(buf));
         });
 
-        logger::debug_ln(
+        shamlog_debug_ln(
             "SparseComm", "skipped", same_rank_tmp.get_native().size(), "communications");
 
         same_rank_tmp.tranfer_all(

@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file SolverStorage.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -22,11 +22,19 @@
 #include "shammodels/sph/BasicSPHGhosts.hpp"
 #include "shammodels/sph/SinkPartStruct.hpp"
 #include "shammodels/sph/SolverConfig.hpp"
+#include "shammodels/sph/solvergraph/NeighCache.hpp"
 #include "shamrock/scheduler/SerialPatchTree.hpp"
 #include "shamrock/scheduler/ShamrockCtx.hpp"
+#include "shamrock/solvergraph/Field.hpp"
+#include "shamrock/solvergraph/FieldRefs.hpp"
+#include "shamrock/solvergraph/Indexes.hpp"
+#include "shamrock/solvergraph/ScalarsEdge.hpp"
 #include "shamsys/legacy/log.hpp"
+#include "shamtree/CompressedLeafBVH.hpp"
+#include "shamtree/KarrasRadixTreeField.hpp"
 #include "shamtree/RadixTree.hpp"
 #include "shamtree/TreeTraversalCache.hpp"
+#include <memory>
 
 namespace shammodels::sph {
 
@@ -39,11 +47,20 @@ namespace shammodels::sph {
         using Tscal              = shambase::VecComponent<Tvec>;
         static constexpr u32 dim = shambase::VectorProperties<Tvec>::dimension;
 
-        using GhostHandle        = BasicSPHGhostHandler<Tvec>;
-        using GhostHandleCache   = typename GhostHandle::CacheMap;
-        using PreStepMergedField = typename GhostHandle::PreStepMergedField;
+        using GhostHandle      = BasicSPHGhostHandler<Tvec>;
+        using GhostHandleCache = typename GhostHandle::CacheMap;
 
-        using RTree = RadixTree<Tmorton, Tvec>;
+        using RTree = shamtree::CompressedLeafBVH<Tmorton, Tvec, 3>;
+
+        std::shared_ptr<shamrock::solvergraph::Indexes<u32>> part_counts;
+        std::shared_ptr<shamrock::solvergraph::Indexes<u32>> part_counts_with_ghost;
+
+        std::shared_ptr<shamrock::solvergraph::FieldRefs<Tvec>> positions_with_ghosts;
+        std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> hpart_with_ghosts;
+
+        std::shared_ptr<shammodels::sph::solvergraph::NeighCache> neigh_cache;
+
+        std::shared_ptr<shamrock::solvergraph::ScalarsEdge<u32>> patch_rank_owner;
 
         Component<SerialPatchTree<Tvec>> serial_patch_tree;
 
@@ -51,19 +68,19 @@ namespace shammodels::sph {
 
         Component<GhostHandleCache> ghost_patch_cache;
 
-        Component<shambase::DistributedData<PreStepMergedField>> merged_xyzh;
+        Component<shambase::DistributedData<shamrock::patch::PatchDataLayer>> merged_xyzh;
 
         Component<shambase::DistributedData<RTree>> merged_pos_trees;
 
-        Component<shambase::DistributedData<RadixTreeField<Tscal>>> rtree_rint_field;
+        Component<shambase::DistributedData<shamtree::KarrasRadixTreeField<Tscal>>>
+            rtree_rint_field;
 
-        Component<shamrock::tree::ObjectCacheHandler> neighbors_cache;
+        std::shared_ptr<shamrock::solvergraph::Field<Tscal>> omega;
 
-        Component<shamrock::ComputeField<Tscal>> omega;
+        Component<std::shared_ptr<shamrock::patch::PatchDataLayerLayout>> ghost_layout;
 
-        Component<shamrock::patch::PatchDataLayout> ghost_layout;
-
-        Component<shambase::DistributedData<shamrock::MergedPatchData>> merged_patchdata_ghost;
+        Component<shambase::DistributedData<shamrock::patch::PatchDataLayer>>
+            merged_patchdata_ghost;
 
         Component<shamrock::ComputeField<Tscal>> alpha_av_updated;
         Component<shambase::DistributedData<PatchDataField<Tscal>>> alpha_av_ghost;

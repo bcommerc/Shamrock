@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -9,7 +9,7 @@
 
 /**
  * @file BlockNeighToCellNeigh.cpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -316,7 +316,7 @@ namespace shammodels::basegodunov::modules {
                     buf_block_max,
                     dir_offset);
 
-                logger::debug_ln(
+                shamlog_debug_ln(
                     "AMR Cell Graph", "Patch", id, "direction", dir, "link cnt", rslt.link_count);
 
                 std::unique_ptr<AMRGraph> tmp_graph = std::make_unique<AMRGraph>(std::move(rslt));
@@ -327,7 +327,7 @@ namespace shammodels::basegodunov::modules {
             cell_graph_links.add_obj(id, std::move(result));
         });
 
-        logger::debug_ln("[AMR cell graph]", "compute antecedent map");
+        shamlog_debug_ln("[AMR cell graph]", "compute antecedent map");
         cell_graph_links.for_each([&](u64 id, OrientedAMRGraph &oriented_block_graph) {
             auto ptr       = shamsys::instance::get_compute_scheduler_ptr();
             u32 cell_count = (edges.sizes.indexes.get(id)) * AMRBlock::block_size;

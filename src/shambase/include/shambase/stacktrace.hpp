@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -204,3 +204,24 @@ using StackEntry = shambase::details::BasicStackEntry;
  * This alias is used to simplify the use of the NamedBasicStackEntry class.
  */
 using NamedStackEntry = shambase::details::NamedBasicStackEntry;
+
+/// Utility to concatenate two tokens
+#define internal_macro_shamrock_CONCAT2(a, b) a##b
+/// Utility to expand a macro with two tokens
+#define internal_macro_shamrock_EXPAND2(a, b) internal_macro_shamrock_CONCAT2(a, b)
+
+/**
+ * @fn __shamrock_stack_entry
+ * @brief Macro to create a stack entry.
+ *
+ * This macro defines a `StackEntry` variable with a unique name, either using
+ * `__COUNTER__` or `__LINE__` to ensure uniqueness.
+ */
+
+#ifdef __COUNTER__
+    #define __shamrock_stack_entry()                                                               \
+        [[maybe_unused]] StackEntry internal_macro_shamrock_EXPAND2(stack_loc_, __COUNTER__) {}
+#else
+    #define __shamrock_stack_entry()                                                               \
+        [[maybe_unused]] StackEntry internal_macro_shamrock_EXPAND2(stack_loc_, __LINE__) {}
+#endif

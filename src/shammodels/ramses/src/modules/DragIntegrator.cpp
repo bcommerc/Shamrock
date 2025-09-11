@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -10,6 +10,7 @@
 /**
  * @file DragIntegrator.cpp
  * @author Léodasce Sewanou (leodasce.sewanou@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -55,7 +56,7 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::involve_w
     shamrock::ComputeField<Tvec> &cfield_dtrhov_d = storage.dtrhov_dust.get();
 
     // load layout info
-    PatchDataLayout &pdl = scheduler().pdl;
+    PatchDataLayerLayout &pdl = scheduler().pdl();
 
     const u32 icell_min = pdl.get_field_idx<TgridVec>("cell_min");
     const u32 icell_max = pdl.get_field_idx<TgridVec>("cell_max");
@@ -67,8 +68,8 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::involve_w
 
     scheduler().for_each_patchdata_nonempty([&, dt, ndust](
                                                 const shamrock::patch::Patch p,
-                                                shamrock::patch::PatchData &pdat) {
-        logger::debug_ln(
+                                                shamrock::patch::PatchDataLayer &pdat) {
+        shamlog_debug_ln(
             "[AMR evolve time step before drag ]", "evolve field with no drag patch", p.id_patch);
 
         sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
@@ -108,7 +109,7 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::involve_w
         auto acc_rhoe = rhoe_patch.get_write_access(depend_list);
 
         auto e1 = q.submit(depend_list, [&, dt](sycl::handler &cgh) {
-            shambase::parralel_for(cgh, cell_count, "evolve field with no drag", [=](u32 id_a) {
+            shambase::parallel_for(cgh, cell_count, "evolve field with no drag", [=](u32 id_a) {
                 acc_rho[id_a]  = rho[id_a] + dt * acc_dt_rho_patch[id_a];
                 acc_rhov[id_a] = rhov[id_a] + dt * acc_dt_rhov_patch[id_a];
                 acc_rhoe[id_a] = rhoe[id_a] + dt * acc_dt_rhoe_patch[id_a];
@@ -138,7 +139,7 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::involve_w
         auto acc_rhov_d = rhov_d_patch.get_write_access(depend_list1);
 
         auto e2 = q.submit(depend_list1, [&, dt, ndust](sycl::handler &cgh) {
-            shambase::parralel_for(
+            shambase::parallel_for(
                 cgh, ndust * cell_count, "dust  evolve field no drag", [=](u32 id_a) {
                     acc_rho_d[id_a]  = rho_d[id_a] + dt * acc_dt_rho_d_patch[id_a];
                     acc_rhov_d[id_a] = rhov_d[id_a] + dt * acc_dt_rhov_d_patch[id_a];
@@ -178,7 +179,7 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::enable_ir
     shamrock::ComputeField<Tvec> &cfield_rhov_d_new = storage.rhov_d_next_no_drag.get();
 
     // load layout info
-    PatchDataLayout &pdl = scheduler().pdl;
+    PatchDataLayerLayout &pdl = scheduler().pdl();
 
     const u32 icell_min = pdl.get_field_idx<TgridVec>("cell_min");
     const u32 icell_max = pdl.get_field_idx<TgridVec>("cell_max");
@@ -197,8 +198,8 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::enable_ir
 
     scheduler().for_each_patchdata_nonempty([&, dt, ndust, friction_control](
                                                 const shamrock::patch::Patch p,
-                                                shamrock::patch::PatchData &pdat) {
-        logger::debug_ln("[AMR enable drag ]", "irk1 drag patch", p.id_patch);
+                                                shamrock::patch::PatchDataLayer &pdat) {
+        shamlog_debug_ln("[AMR enable drag ]", "irk1 drag patch", p.id_patch);
 
         sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
         u32 id               = p.id_patch;
@@ -236,7 +237,7 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::enable_ir
         auto acc_alphas = alphas_buf.get_read_access(depend_list);
 
         auto e = q.submit(depend_list, [&, dt, ndust, friction_control](sycl::handler &cgh) {
-            shambase::parralel_for(cgh, cell_count, "add_drag [irk1]", [=](u32 id_a) {
+            shambase::parallel_for(cgh, cell_count, "add_drag [irk1]", [=](u32 id_a) {
                 f64_3 tmp_mom_1 = acc_rhov_new_patch[id_a];
                 f64 tmp_rho     = acc_rho_old[id_a];
 
@@ -335,7 +336,7 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::enable_ex
     shamrock::ComputeField<Tvec> &cfield_rhov_d_new = storage.rhov_d_next_no_drag.get();
 
     // load layout info
-    PatchDataLayout &pdl = scheduler().pdl;
+    PatchDataLayerLayout &pdl = scheduler().pdl();
 
     const u32 icell_min = pdl.get_field_idx<TgridVec>("cell_min");
     const u32 icell_max = pdl.get_field_idx<TgridVec>("cell_max");
@@ -355,8 +356,8 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::enable_ex
 
     scheduler().for_each_patchdata_nonempty([&, dt, ndust, friction_control](
                                                 const shamrock::patch::Patch p,
-                                                shamrock::patch::PatchData &pdat) {
-        logger::debug_ln("[Ramses]", "expo drag on patch", p.id_patch);
+                                                shamrock::patch::PatchDataLayer &pdat) {
+        shamlog_debug_ln("[Ramses]", "expo drag on patch", p.id_patch);
 
         sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
         u32 id               = p.id_patch;
@@ -423,7 +424,7 @@ void shammodels::basegodunov::modules::DragIntegrator<Tvec, TgridVec>::enable_ex
             sycl::local_accessor<f64> local_I(loc_acc_size, cgh);
             sycl::local_accessor<f64> local_Id(loc_acc_size, cgh);
 
-            logger::debug_sycl_ln("SYCL", shambase::format("parallel_for add_drag [expo]"));
+            shamlog_debug_sycl_ln("SYCL", shambase::format("parallel_for add_drag [expo]"));
             cgh.parallel_for(
                 shambase::make_range(cell_count, group_size), [=](sycl::nd_item<1> id) {
                     u32 loc_id = id.get_local_id();

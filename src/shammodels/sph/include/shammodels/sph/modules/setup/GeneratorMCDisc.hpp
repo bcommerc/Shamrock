@@ -1,7 +1,7 @@
 // -------------------------------------------------------//
 //
 // SHAMROCK code for hydrodynamics
-// Copyright (c) 2021-2024 Timothée David--Cléris <tim.shamrock@proton.me>
+// Copyright (c) 2021-2025 Timothée David--Cléris <tim.shamrock@proton.me>
 // SPDX-License-Identifier: CeCILL Free Software License Agreement v2.1
 // Shamrock is licensed under the CeCILL 2.1 License, see LICENSE for more information
 //
@@ -11,7 +11,7 @@
 
 /**
  * @file GeneratorMCDisc.hpp
- * @author Timothée David--Cléris (timothee.david--cleris@ens-lyon.fr)
+ * @author Timothée David--Cléris (tim.shamrock@proton.me)
  * @brief
  *
  */
@@ -97,7 +97,7 @@ namespace shammodels::sph::modules {
 
         bool is_done();
 
-        shamrock::patch::PatchData next_n(u32 nmax);
+        shamrock::patch::PatchDataLayer next_n(u32 nmax);
 
         std::string get_name() { return "GeneratorMCDisc"; }
         ISPHSetupNode_Dot get_dot_subgraph() { return ISPHSetupNode_Dot{get_name(), 0, {}}; }
@@ -143,7 +143,7 @@ class shammodels::sph::modules::GeneratorMCDisc<Tvec, SPHKernel>::DiscIterator {
           r_out(r_out), sigma_profile(sigma_profile), H_profile(H_profile),
           rot_profile(rot_profile), cs_profile(cs_profile), eng(eng), current_index(0) {
 
-        logger::debug_ln(
+        shamlog_debug_ln(
             "GeneratorMCDisc",
             "part_mass",
             part_mass,
