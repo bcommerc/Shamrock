@@ -557,4 +557,99 @@ namespace shammodels::basegodunov::modules {
         virtual std::string _impl_get_tex();
     };
 
+   template<class Tvec, class TgridVec>
+    class InterpolateToFacePscal : public shamrock::solvergraph::INode {
+        using Tscal = shambase::VecComponent<Tvec>;
+
+        using SlopeMode = shammodels::basegodunov::SlopeMode;
+
+        u32 block_size;
+        u32 ngas_pscal;
+
+        public:
+        InterpolateToFacePscal(u32 block_size, u32 ngas_pscal) : block_size(block_size),ngas_pscal(ngas_pscal) {}
+
+        struct Edges {
+            const shamrock::solvergraph::ScalarEdge<Tscal> &dt_interp;  
+
+            const solvergraph::OrientedAMRGraphEdge<Tvec, TgridVec> &cell_neigh_graph;
+
+            const shamrock::solvergraph::IFieldSpan<Tscal> &spans_block_cell_sizes;
+            const shamrock::solvergraph::IFieldSpan<Tvec> &spans_cell0block_aabb_lower;
+            const shamrock::solvergraph::IFieldSpan<Tscal> &spans_pscals;
+            const shamrock::solvergraph::IFieldSpan<Tvec> &spans_grad_pscal;
+            const shamrock::solvergraph::IFieldSpan<Tvec> &spans_vel;
+
+            solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>> &pscal_face_xp;
+            solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>> &pscal_face_xm;
+            solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>> &pscal_face_yp;
+            solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>> &pscal_face_ym;
+            solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>> &pscal_face_zp;
+            solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>> &pscal_face_zm;
+        };
+
+        inline void set_edges(
+            std::shared_ptr<shamrock::solvergraph::ScalarEdge<Tscal>> dt_interp,
+            std::shared_ptr<solvergraph::OrientedAMRGraphEdge<Tvec, TgridVec>> cell_neigh_graph,
+            std::shared_ptr<shamrock::solvergraph::IFieldSpan<Tscal>> spans_block_cell_sizes,
+            std::shared_ptr<shamrock::solvergraph::IFieldSpan<Tvec>> spans_cell0block_aabb_lower,
+            std::shared_ptr<shamrock::solvergraph::IFieldSpan<Tscal>> spans_pscals,
+            std::shared_ptr<shamrock::solvergraph::IFieldSpan<Tvec>> spans_grad_pscal,
+            std::shared_ptr<shamrock::solvergraph::IFieldSpan<Tvec>> spans_vel,
+            std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+                &pscal_face_xp,
+            std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+                &pscal_face_xm,
+            std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+                &pscal_face_yp,
+            std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+                &pscal_face_ym,
+            std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+                &pscal_face_zp,
+            std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+                &pscal_face_zm) {
+            __internal_set_ro_edges({
+                dt_interp,
+                cell_neigh_graph,
+                spans_block_cell_sizes,
+                spans_cell0block_aabb_lower,
+                spans_pscals,
+                spans_grad_pscal,
+                spans_vel
+            });
+            __internal_set_rw_edges({
+                pscal_face_xp,
+                pscal_face_xm,
+                pscal_face_yp,
+                pscal_face_ym,
+                pscal_face_zp,
+                pscal_face_zm,
+            });
+        }
+
+        inline Edges get_edges() {
+            return Edges{
+                get_ro_edge<shamrock::solvergraph::ScalarEdge<Tscal>>(0),
+                get_ro_edge<solvergraph::OrientedAMRGraphEdge<Tvec, TgridVec>>(1),
+                get_ro_edge<shamrock::solvergraph::IFieldSpan<Tscal>>(2),
+                get_ro_edge<shamrock::solvergraph::IFieldSpan<Tvec>>(3),
+                get_ro_edge<shamrock::solvergraph::IFieldSpan<Tscal>>(4),
+                get_ro_edge<shamrock::solvergraph::IFieldSpan<Tvec>>(5),
+                get_ro_edge<shamrock::solvergraph::IFieldSpan<Tvec>>(6),
+                get_rw_edge<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(0),
+                get_rw_edge<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(1),
+                get_rw_edge<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(2),
+                get_rw_edge<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(3),
+                get_rw_edge<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(4),
+                get_rw_edge<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(5),
+            };
+        }
+
+        void _impl_evaluate_internal();
+
+        inline virtual std::string _impl_get_label() { return "InterpolatePscalToFacePscal"; };
+
+        virtual std::string _impl_get_tex();
+    };
+
 } // namespace shammodels::basegodunov::modules

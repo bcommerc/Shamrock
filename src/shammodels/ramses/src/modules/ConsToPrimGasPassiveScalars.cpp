@@ -10,7 +10,7 @@
 /**
  * @file ConsToPrimGasPassiveScalars.cpp
  * @author Benoît Commerçon (benoit.commercon@ens-lyon.fr)
- * @brief
+ * @brief 
  * @date 2025-06-26
  */
 
@@ -27,8 +27,8 @@ namespace {
         using Tscal = shambase::VecComponent<Tvec>;
 
         inline static void kernel(
-            const shambase::DistributedData<shamrock::PatchDataFieldSpanPointer<Tscal>>
-                &spans_rho_pscal,
+            const shambase::DistributedData<shamrock::PatchDataFieldSpanPointer<Tscal>> &spans_rho_pscal,
+            const shambase::DistributedData<shamrock::PatchDataFieldSpanPointer<Tscal>> &spans_rho_gas,
             shambase::DistributedData<shamrock::PatchDataFieldSpanPointer<Tscal>> &spans_pscal,
             const shambase::DistributedData<u32> &sizes,
             u32 block_size,
@@ -42,15 +42,19 @@ namespace {
 
             sham::distributed_data_kernel_call(
                 shamsys::instance::get_compute_scheduler_ptr(),
-                sham::DDMultiRef{spans_rho_pscal},
+                sham::DDMultiRef{spans_rho_pscal,spans_rho_gas},
                 sham::DDMultiRef{spans_pscal},
                 cell_counts,
-                [npscal_gas](u32 i, const Tscal *__restrict rhopscal, Tscal *__restrict pscal) {
-                    auto pscal_conststate = shammath::ConsState<Tvec>{rhopscal[i]};
+                [npscal_gas](
+                    u32 i,
+                    const Tscal *__restrict rhopscal,
+                    const Tscal *__restrict rhogas
+                    Tscal *__restrict pscal) {
+                    auto conststate_pscal = shammath::ConsStatePscal<Tvec>{rhopscal[i]};
+                    auto dgas = rhogas[i];   
+                    auto primstate_pscal = shammath::cons_to_prim_pscal(conststate_pscal, dgas);
 
-                    auto pscal_prim_state = shammath::pscal_cons_to_prim(pscal_conststate);
-
-                    pscal[i] = prim_state.pscal;
+                    pscal[i] = primstate_pscal.pscal;
                 });
         }
     };
@@ -60,57 +64,44 @@ namespace {
 namespace shammodels::basegodunov::modules {
 
     template<class Tvec>
-    void NodeConsToPrimGas<Tvec>::_impl_evaluate_internal() {
+    void NodeConsToPrimGasPassiveScalars<Tvec>::_impl_evaluate_internal() {
         auto edges = get_edges();
+        // Check that the size of spans_rho is compatible 
+        // with the totalblock numbers for the current patch, and hydro variable on grid
+        edges.spans_rho_gas.check_sizes(edges.sizes.indexes);
+        edges.spans_rho_pscal.check_sizes(edges.sizes.indexes);
+        edges.spans_pscal.ensure_sizes(edges.sizes.indexes);
 
-        edges.spans_rho.check_sizes(edges.sizes.indexes);
-        edges.spans_rhov.check_sizes(edges.sizes.indexes);
-        edges.spans_rhoe.check_sizes(edges.sizes.indexes);
-
-        edges.spans_vel.ensure_sizes(edges.sizes.indexes);
-        edges.spans_P.ensure_sizes(edges.sizes.indexes);
-
-        KernelConsToPrimGas<Tvec>::kernel(
-            edges.spans_rho.get_spans(),
-            edges.spans_rhov.get_spans(),
-            edges.spans_rhoe.get_spans(),
-            edges.spans_vel.get_spans(),
-            edges.spans_P.get_spans(),
+        KernelConsToPrimPassiveScalars<Tvec>::kernel(
+            edges.spans_rho_pscal.get_spans(),
+            edges.spans_rho_gas.get_spans(),
+            edges.spans_pscal.get_spans(),
             edges.sizes.indexes,
             block_size,
-            gamma);
+            npscal_gas);
     }
 
     template<class Tvec>
-    std::string NodeConsToPrimGas<Tvec>::_impl_get_tex() {
+    std::string NodeConsToPrimGasPassiveScalars<Tvec>::_impl_get_tex() {
 
         auto block_count = get_ro_edge_base(0).get_tex_symbol();
-        auto rho         = get_ro_edge_base(1).get_tex_symbol();
-        auto rhov        = get_ro_edge_base(2).get_tex_symbol();
-        auto rhoe        = get_ro_edge_base(3).get_tex_symbol();
-        auto vel         = get_rw_edge_base(0).get_tex_symbol();
-        auto P           = get_rw_edge_base(1).get_tex_symbol();
+        auto rho_pscal   = get_ro_edge_base(1).get_tex_symbol();
+        auto rho_gas     = get_ro_edge_base(2).get_tex_symbol();
+        auto pscal       = get_rw_edge_base(0).get_tex_symbol();
 
         std::string tex = R"tex(
-            Conservative to primitive variable (gas)
+            Conservative to primitive variable (gas passive scalars)
 
             \begin{align}
-            {vel}_i &= \frac{ {rhov}_i }{ {rho}_i } \\
-            {P}_i &= (\gamma - 1) \left( {rhoe}_i - \frac{ {rhov}_i^2 }{ 2 {rho}_i } \right) \\
+            {pscal}_i &= \frac{ {rho_pscal}_i }{ {rho_gas}_i } \\
             i &\in [0,{block_count} * N_{\rm cell/block}) \\
-            \gamma &= {gamma} \\
             N_{\rm cell/block} & = {block_size}
             \end{align}
         )tex";
 
-        shambase::replace_all(tex, "{vel}", vel);
-        shambase::replace_all(tex, "{P}", P);
-        shambase::replace_all(tex, "{rho}", rho);
-        shambase::replace_all(tex, "{rhov}", rhov);
-        shambase::replace_all(tex, "{rhoe}", rhoe);
-        shambase::replace_all(tex, "{block_count}", block_count);
-        shambase::replace_all(tex, "{gamma}", shambase::format("{}", gamma));
-        shambase::replace_all(tex, "{block_size}", shambase::format("{}", block_size));
+        shambase::replace_all(tex, "{rho_pscal}", rho_pscal);
+        shambase::replace_all(tex, "{rho_gas}", rho_gas);
+        shambase::replace_all(tex, "{pscal}", Pscal);
 
         return tex;
     }

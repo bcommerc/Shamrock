@@ -81,7 +81,7 @@ namespace shammodels::basegodunov {
         std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> refs_rhoe;
         std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> refs_rho_dust;
         std::shared_ptr<shamrock::solvergraph::FieldRefs<Tvec>> refs_rhov_dust;
-
+      
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> vel;
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> press;
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> vel_dust;
@@ -234,6 +234,18 @@ namespace shammodels::basegodunov {
         Component<shamrock::ComputeField<Tscal>> dtrho_dust;
         // time derivative dust momemtum
         Component<shamrock::ComputeField<Tvec>> dtrhov_dust;
+
+        // Gas Passive scalars variable
+        std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> refs_rhopscal;
+        std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> refs_pscal;
+        std::shared_ptr<shamrock::solvergraph::Field<Tvec>> grad_pscal;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> pscal_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> pscal_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> pscal_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> pscal_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> pscal_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>> pscal_face_zm;
 
         struct Timings {
             f64 interface = 0;
