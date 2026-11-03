@@ -33,9 +33,11 @@ set(Sources
     src/modules/ConsToPrimGasAdiabatic.cpp
     src/modules/ConsToPrimGasBarotropic.cpp
     src/modules/ConsToPrimDust.cpp
+    src/modules/ConsToPrimGasPassiveScalars.cpp
     src/modules/EulerTimeDerivativeGasAdiabatic.cpp
     src/modules/EulerTimeDerivativeGasBarotropic.cpp
     src/modules/EulerTimeDerivativeDust.cpp
+    src/modules/EulerTimeDerivativeGasPassiveScalars.cpp
     src/modules/ComputeCellAABB.cpp
     src/modules/NodeBuildTrees.cpp
     src/modules/FindBlockNeigh.cpp

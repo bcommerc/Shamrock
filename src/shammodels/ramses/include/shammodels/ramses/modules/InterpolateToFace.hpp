@@ -106,6 +106,24 @@
     X_RW(LinkFieldScal, rho_dust_face_zp)                                                          \
     X_RW(LinkFieldScal, rho_dust_face_zm)
 
+#define NODE_EDGES_PSCAL_GAS(X_RO, X_RW)                                                           \
+    /* ------------------- inputs ------------------- */                                           \
+    X_RO(ScalarEdgeScal, dt_interp)                                                                \
+    X_RO(AMRGraphEdge, cell_neigh_graph)                                                           \
+    X_RO(shamrock::solvergraph::IFieldSpan<Tscal>, spans_block_cell_sizes)                         \
+    X_RO(shamrock::solvergraph::IFieldSpan<Tvec>, spans_cell0block_aabb_lower)                     \
+    X_RO(shamrock::solvergraph::IFieldSpan<Tscal>, spans_pscal_gas)                                \
+    X_RO(shamrock::solvergraph::IFieldSpan<Tvec>, spans_grad_pscal_gas)                            \
+    X_RO(shamrock::solvergraph::IFieldSpan<Tscal>, spans_dt_pscal_gas)                             \
+                                                                                                   \
+    /* ------------------- outputs ------------------- */                                          \
+    X_RW(LinkFieldScal, pscal_gas_face_xp)                                                         \
+    X_RW(LinkFieldScal, pscal_gas_face_xm)                                                         \
+    X_RW(LinkFieldScal, pscal_gas_face_yp)                                                         \
+    X_RW(LinkFieldScal, pscal_gas_face_ym)                                                         \
+    X_RW(LinkFieldScal, pscal_gas_face_zp)                                                         \
+    X_RW(LinkFieldScal, pscal_gas_face_zm)
+
 #define NODE_EDGES_VEL_DUST(X_RO, X_RW)                                                            \
     /* ------------------- inputs ------------------- */                                           \
     X_RO(ScalarEdgeScal, dt_interp)                                                                \
@@ -253,6 +271,33 @@ namespace shammodels::basegodunov::modules {
         virtual std::string _impl_get_tex() const;
     };
 
+    template<class Tvec, class TgridVec>
+    class InterpolateToFacePscalGas : public shamrock::solvergraph::INode {
+        using Tscal = shambase::VecComponent<Tvec>;
+
+        /// Aliases without commas, the edge list macros cannot carry template argument lists
+        using ScalarEdgeScal = shamrock::solvergraph::ScalarEdge<Tscal>;
+        using AMRGraphEdge   = solvergraph::OrientedAMRGraphEdge<Tvec, TgridVec>;
+        using LinkFieldScal  = solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>;
+
+        u32 block_size;
+        u32 npscal_gas;
+
+        public:
+        InterpolateToFacePscalGas(u32 block_size, u32 npscal_gas)
+            : block_size(block_size), npscal_gas(npscal_gas) {}
+
+        EXPAND_NODE_EDGES(NODE_EDGES_PSCAL_GAS)
+
+        void _impl_evaluate_internal();
+
+        inline virtual std::string _impl_get_label() const {
+            return "InterpolatePscalGasToFacePscalGas";
+        };
+
+        virtual std::string _impl_get_tex() const;
+    };
+
 } // namespace shammodels::basegodunov::modules
 
 #undef NODE_EDGES_RHO
@@ -260,3 +305,4 @@ namespace shammodels::basegodunov::modules {
 #undef NODE_EDGES_PRESS
 #undef NODE_EDGES_RHO_DUST
 #undef NODE_EDGES_VEL_DUST
+#undef NODE_EDGES_PSCAL_GAS

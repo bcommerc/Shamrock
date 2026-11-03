@@ -95,6 +95,7 @@ namespace shammodels::basegodunov {
         std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> refs_rhoe;
         std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> refs_rho_dust;
         std::shared_ptr<shamrock::solvergraph::FieldRefs<Tvec>> refs_rhov_dust;
+        std::shared_ptr<shamrock::solvergraph::FieldRefs<Tscal>> refs_rho_gas_pscal;
 
         /* Field to save a snapshot of conservative variables before start refinement if 2nd order
          * prolongation is required.*/
@@ -105,6 +106,7 @@ namespace shammodels::basegodunov {
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> vel;
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> press;
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> vel_dust;
+        std::shared_ptr<shamrock::solvergraph::Field<Tscal>> pscal_gas;
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> rho_primitive;
 
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> block_cell_sizes;
@@ -124,6 +126,8 @@ namespace shammodels::basegodunov {
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> dy_v_dust;
         /// dust fields gradients (d vdust / d z)
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> dz_v_dust;
+        /// gas passive scalars gradients (grad s)
+        std::shared_ptr<shamrock::solvergraph::Field<Tvec>> grad_pscal_gas;
 
         /// Euler time derivative of the gas primitive density (predictor term)
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> euler_dt_rho;
@@ -136,6 +140,8 @@ namespace shammodels::basegodunov {
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> euler_dt_rho_dust;
         /// Euler time derivative of the dust primitive velocity (predictor term)
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> euler_dt_vel_dust;
+        /// Euler time derivative of the gas passive scalars (predictor term)
+        std::shared_ptr<shamrock::solvergraph::Field<Tscal>> euler_dt_pscal_gas;
 
         std::shared_ptr<shamrock::solvergraph::ScalarEdge<Tscal>> rho_mean;
         std::shared_ptr<shamrock::solvergraph::ScalarEdge<Tscal>> simulation_volume;
@@ -305,6 +311,19 @@ namespace shammodels::basegodunov {
         std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_ym;
         std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_zp;
         std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>> vel_dust_face_zm;
+
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+            pscal_gas_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+            pscal_gas_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+            pscal_gas_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+            pscal_gas_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+            pscal_gas_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>
+            pscal_gas_face_zm;
 
         // time derivative dust density
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> dtrho_dust;

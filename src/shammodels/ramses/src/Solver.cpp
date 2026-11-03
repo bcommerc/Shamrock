@@ -44,10 +44,12 @@
 #include "shammodels/ramses/modules/ConsToPrimDust.hpp"
 #include "shammodels/ramses/modules/ConsToPrimGasAdiabatic.hpp"
 #include "shammodels/ramses/modules/ConsToPrimGasBarotropic.hpp"
+#include "shammodels/ramses/modules/ConsToPrimGasPassiveScalars.hpp"
 #include "shammodels/ramses/modules/DragIntegrator.hpp"
 #include "shammodels/ramses/modules/EulerTimeDerivativeDust.hpp"
 #include "shammodels/ramses/modules/EulerTimeDerivativeGasAdiabatic.hpp"
 #include "shammodels/ramses/modules/EulerTimeDerivativeGasBarotropic.hpp"
+#include "shammodels/ramses/modules/EulerTimeDerivativeGasPassiveScalars.hpp"
 #include "shammodels/ramses/modules/ExtractGhostLayer.hpp"
 #include "shammodels/ramses/modules/FindBlockNeigh.hpp"
 #include "shammodels/ramses/modules/FindGhostLayerIndices.hpp"
@@ -406,6 +408,11 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
             "rhovel_dust", "(\\rho_{\\rm dust} \\mathbf{v}_{\\rm dust})");
     }
 
+    if (solver_config.is_gas_passive_scalar_on()) {
+        storage.refs_rho_gas_pscal = std::make_shared<shamrock::solvergraph::FieldRefs<Tscal>>(
+            "rho_gas_pscal", "(\\rho s)");
+    }
+
     // will be filled by NodeConsToPrimGasAdiabatic or NodeConsToPrimGasBarotropic
     storage.vel = std::make_shared<shamrock::solvergraph::Field<Tvec>>(
         AMRBlock::block_size, "vel", "\\mathbf{v}");
@@ -434,6 +441,14 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
         // will be filled by NodeConsToPrimDust
         storage.vel_dust = std::make_shared<shamrock::solvergraph::Field<Tvec>>(
             AMRBlock::block_size * ndust, "vel_dust", "{\\mathbf{v}_{\\rm dust}}");
+    }
+
+    if (solver_config.is_gas_passive_scalar_on()) {
+        u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+
+        // will be filled by NodeConsToPrimGasPassiveScalars
+        storage.pscal_gas = std::make_shared<shamrock::solvergraph::Field<Tscal>>(
+            AMRBlock::block_size * npscal_gas, "pscal_gas", "s");
     }
 
     storage.trees
@@ -513,6 +528,16 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
             AMRBlock::block_size * ndust,
             "euler_dt_vel_dust",
             "\\partial_t \\mathbf{v}_{\\rm dust}");
+    }
+
+    if (solver_config.is_gas_passive_scalar_on()) {
+        u32 npscal_gas         = solver_config.npscal_gas_config.npscal_gas;
+        storage.grad_pscal_gas = std::make_shared<shamrock::solvergraph::Field<Tvec>>(
+            AMRBlock::block_size * npscal_gas, "grad_pscal_gas", "\\nabla s");
+
+        // will be filled by NodeEulerTimeDerivativeGasPassiveScalars
+        storage.euler_dt_pscal_gas = std::make_shared<shamrock::solvergraph::Field<Tscal>>(
+            AMRBlock::block_size * npscal_gas, "euler_dt_pscal_gas", "\\partial_t s");
     }
 
     {
@@ -615,6 +640,29 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
         storage.vel_dust_face_zm
             = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<std::array<Tvec, 2>>>(
                 "vel_dust_face_zm", "vel_dust_face_zm", ndust);
+    }
+
+    if (solver_config.is_gas_passive_scalar_on()) {
+        u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+
+        storage.pscal_gas_face_xp
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(
+                "pscal_gas_face_xp", "pscal_gas_face_xp", npscal_gas);
+        storage.pscal_gas_face_xm
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(
+                "pscal_gas_face_xm", "pscal_gas_face_xm", npscal_gas);
+        storage.pscal_gas_face_yp
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(
+                "pscal_gas_face_yp", "pscal_gas_face_yp", npscal_gas);
+        storage.pscal_gas_face_ym
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(
+                "pscal_gas_face_ym", "pscal_gas_face_ym", npscal_gas);
+        storage.pscal_gas_face_zp
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(
+                "pscal_gas_face_zp", "pscal_gas_face_zp", npscal_gas);
+        storage.pscal_gas_face_zm
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<std::array<Tscal, 2>>>(
+                "pscal_gas_face_zm", "pscal_gas_face_zm", npscal_gas);
     }
 
     if (solver_config.should_compute_rho_mean()) {
@@ -947,6 +995,17 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
             solver_sequence.push_back(
                 std::make_shared<decltype(attach_rhov_dust)>(std::move(attach_rhov_dust)));
         }
+
+        // attach spans to gas passive scalars with ghosts
+        if (solver_config.is_gas_passive_scalar_on()) {
+            shamrock::solvergraph::GetFieldRefFromLayer<Tscal> attach_rho_gas_pscal
+                = shamrock::solvergraph::GetFieldRefFromLayer<Tscal>(
+                    storage.ghost_layout, "rho_gas_pscal");
+            attach_rho_gas_pscal.set_edges(
+                storage.merged_patchdata_ghost, storage.refs_rho_gas_pscal);
+            solver_sequence.push_back(
+                std::make_shared<decltype(attach_rho_gas_pscal)>(std::move(attach_rho_gas_pscal)));
+        }
     }
 
     { // build trees
@@ -1112,6 +1171,18 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
             const_to_prim_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
         }
 
+        if (solver_config.is_gas_passive_scalar_on()) {
+            u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+            modules::NodeConsToPrimGasPassiveScalars<Tvec> node{AMRBlock::block_size, npscal_gas};
+            node.set_edges(
+                storage.block_counts_with_ghost,
+                storage.refs_rho,
+                storage.refs_rho_gas_pscal,
+                storage.pscal_gas);
+
+            const_to_prim_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
+        }
+
         shamrock::solvergraph::OperationSequence seq(
             "Cons to Prim", std::move(const_to_prim_sequence));
         solver_sequence.push_back(std::make_shared<decltype(seq)>(std::move(seq)));
@@ -1181,6 +1252,19 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
                 storage.dy_v_dust,
                 storage.dz_v_dust);
             grad_sequence.push_back(std::make_shared<decltype(node2)>(std::move(node2)));
+        }
+
+        if (solver_config.is_gas_passive_scalar_on()) {
+            u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+            modules::SlopeLimitedScalarGradient<Tvec, TgridVec> node{
+                AMRBlock::block_size, npscal_gas, solver_config.slope_config};
+            node.set_edges(
+                storage.block_counts_with_ghost,
+                storage.cell_graph_edge,
+                storage.block_cell_sizes,
+                storage.pscal_gas,
+                storage.grad_pscal_gas);
+            grad_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
         }
 
         shamrock::solvergraph::OperationSequence seq(
@@ -1257,6 +1341,18 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
                 storage.dz_v_dust,
                 storage.euler_dt_rho_dust,
                 storage.euler_dt_vel_dust);
+            dt_prim_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
+        }
+
+        if (solver_config.is_gas_passive_scalar_on()) {
+            u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+            modules::NodeEulerTimeDerivativeGasPassiveScalars<Tvec> node{
+                AMRBlock::block_size, npscal_gas};
+            node.set_edges(
+                storage.block_counts_with_ghost,
+                storage.vel,
+                storage.grad_pscal_gas,
+                storage.euler_dt_pscal_gas);
             dt_prim_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
         }
 
@@ -1367,6 +1463,27 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
                 storage.vel_dust_face_ym,
                 storage.vel_dust_face_zp,
                 storage.vel_dust_face_zm);
+            interp_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
+        }
+
+        if (solver_config.is_gas_passive_scalar_on()) {
+            u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+            modules::InterpolateToFacePscalGas<Tvec, TgridVec> node{
+                AMRBlock::block_size, npscal_gas};
+            node.set_edges(
+                storage.dt_over2,
+                storage.cell_graph_edge,
+                storage.block_cell_sizes,
+                storage.cell0block_aabb_lower,
+                storage.pscal_gas,
+                storage.grad_pscal_gas,
+                storage.euler_dt_pscal_gas,
+                storage.pscal_gas_face_xp,
+                storage.pscal_gas_face_xm,
+                storage.pscal_gas_face_yp,
+                storage.pscal_gas_face_ym,
+                storage.pscal_gas_face_zp,
+                storage.pscal_gas_face_zm);
             interp_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
         }
 
