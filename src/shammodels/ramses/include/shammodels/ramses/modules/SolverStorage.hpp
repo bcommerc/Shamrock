@@ -237,6 +237,13 @@ namespace shammodels::basegodunov {
         std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_zp;
         std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tvec>> flux_rhov_dust_face_zm;
 
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_pscal_gas_face_xp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_pscal_gas_face_xm;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_pscal_gas_face_yp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_pscal_gas_face_ym;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_pscal_gas_face_zp;
+        std::shared_ptr<solvergraph::NeighGraphLinkFieldEdge<Tscal>> flux_pscal_gas_face_zm;
+
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> dtrho;
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> dtrhov;
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> dtrhoe;

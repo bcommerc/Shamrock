@@ -37,6 +37,7 @@
 #include "shammodels/ramses/modules/ComputeCFL.hpp"
 #include "shammodels/ramses/modules/ComputeCellAABB.hpp"
 #include "shammodels/ramses/modules/ComputeCoordinates.hpp"
+#include "shammodels/ramses/modules/ComputeFluxGasPassiveScalars.hpp"
 #include "shammodels/ramses/modules/ComputeLevel0CellSize.hpp"
 #include "shammodels/ramses/modules/ComputeMass.hpp"
 #include "shammodels/ramses/modules/ComputeNextRho.hpp"
@@ -785,6 +786,29 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
         storage.flux_rhov_dust_face_zp
             = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<Tvec>>(
                 "flux_rhov_dust_face_zp", "flux_rhov_dust_face_zp", ndust);
+    }
+
+    if (solver_config.is_gas_passive_scalar_on()) {
+        u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+
+        storage.flux_pscal_gas_face_xp
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<Tscal>>(
+                "flux_pscal_gas_face_xp", "flux_pscal_gas_face_xp", npscal_gas);
+        storage.flux_pscal_gas_face_xm
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<Tscal>>(
+                "flux_pscal_gas_face_xm", "flux_pscal_gas_face_xm", npscal_gas);
+        storage.flux_pscal_gas_face_yp
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<Tscal>>(
+                "flux_pscal_gas_face_yp", "flux_pscal_gas_face_yp", npscal_gas);
+        storage.flux_pscal_gas_face_ym
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<Tscal>>(
+                "flux_pscal_gas_face_ym", "flux_pscal_gas_face_ym", npscal_gas);
+        storage.flux_pscal_gas_face_zp
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<Tscal>>(
+                "flux_pscal_gas_face_zp", "flux_pscal_gas_face_zp", npscal_gas);
+        storage.flux_pscal_gas_face_zm
+            = std::make_shared<solvergraph::NeighGraphLinkFieldEdge<Tscal>>(
+                "flux_pscal_gas_face_zm", "flux_pscal_gas_face_zm", npscal_gas);
     }
 
     storage.dtrho = std::make_shared<shamrock::solvergraph::Field<Tscal>>(
@@ -1695,6 +1719,33 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
             } else {
                 shambase::throw_unimplemented("unknown flux mode");
             }
+        }
+
+        // after the gas fluxes: the passive scalars are upwinded with the gas mass flux
+        if (solver_config.is_gas_passive_scalar_on()) {
+            modules::NodeComputeFluxGasPassiveScalars<Tvec, TgridVec> node{
+                solver_config.npscal_gas_config.npscal_gas};
+            node.set_edges(
+                storage.cell_graph_edge,
+                storage.flux_rho_face_xp,
+                storage.flux_rho_face_xm,
+                storage.flux_rho_face_yp,
+                storage.flux_rho_face_ym,
+                storage.flux_rho_face_zp,
+                storage.flux_rho_face_zm,
+                storage.pscal_gas_face_xp,
+                storage.pscal_gas_face_xm,
+                storage.pscal_gas_face_yp,
+                storage.pscal_gas_face_ym,
+                storage.pscal_gas_face_zp,
+                storage.pscal_gas_face_zm,
+                storage.flux_pscal_gas_face_xp,
+                storage.flux_pscal_gas_face_xm,
+                storage.flux_pscal_gas_face_yp,
+                storage.flux_pscal_gas_face_ym,
+                storage.flux_pscal_gas_face_zp,
+                storage.flux_pscal_gas_face_zm);
+            flux_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
         }
 
         shamrock::solvergraph::OperationSequence seq("Compute fluxes", std::move(flux_sequence));
