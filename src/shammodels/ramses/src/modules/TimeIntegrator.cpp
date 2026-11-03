@@ -122,4 +122,43 @@ void shammodels::basegodunov::modules::TimeIntegrator<Tvec, TgridVec>::forward_e
     }
 }
 
+template<class Tvec, class TgridVec>
+void shammodels::basegodunov::modules::TimeIntegrator<Tvec, TgridVec>::
+    forward_euler_gas_passive_scalars(Tscal dt) {
+
+    __shamrock_stack_entry();
+
+    shamrock::solvergraph::Field<Tscal> &cfield_dtrho_gas_pscal
+        = shambase::get_check_ref(storage.dtrho_gas_pscal);
+
+    shamrock::patch::PatchDataLayerLayout &pdl = scheduler().pdl_old();
+    const u32 irho_gas_pscal                   = pdl.get_field_idx<Tscal>("rho_gas_pscal");
+
+    u32 npscal_gas = solver_config.npscal_gas_config.npscal_gas;
+
+    scheduler().for_each_patchdata_nonempty(
+        [&, dt](const shamrock::patch::Patch p, shamrock::patch::PatchDataLayer &pdat) {
+            sham::DeviceQueue &q = shamsys::instance::get_compute_scheduler().get_queue();
+
+            sham::DeviceBuffer<Tscal> &dt_rho_gas_pscal_patch
+                = cfield_dtrho_gas_pscal.get_buf(p.id_patch);
+            sham::DeviceBuffer<Tscal> &buf_rho_gas_pscal
+                = pdat.get_field_buf_ref<Tscal>(irho_gas_pscal);
+
+            u32 cell_count = pdat.get_obj_cnt() * AMRBlock::block_size;
+
+            sham::kernel_call(
+                q,
+                sham::MultiRef{dt_rho_gas_pscal_patch},
+                sham::MultiRef{buf_rho_gas_pscal},
+                npscal_gas * cell_count,
+                [dt](
+                    u32 id_a,
+                    const Tscal *__restrict acc_dt_rho_gas_pscal,
+                    Tscal *__restrict rho_gas_pscal) {
+                    rho_gas_pscal[id_a] += dt * acc_dt_rho_gas_pscal[id_a];
+                });
+        });
+}
+
 template class shammodels::basegodunov::modules::TimeIntegrator<f64_3, i64_3>;

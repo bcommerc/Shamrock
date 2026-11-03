@@ -336,6 +336,8 @@ namespace shammodels::basegodunov {
         std::shared_ptr<shamrock::solvergraph::Field<Tscal>> dtrho_dust;
         // time derivative dust momemtum
         std::shared_ptr<shamrock::solvergraph::Field<Tvec>> dtrhov_dust;
+        // time derivative of the gas passive scalars (rho s)
+        std::shared_ptr<shamrock::solvergraph::Field<Tscal>> dtrho_gas_pscal;
 
         struct Timings {
             f64 interface = 0;

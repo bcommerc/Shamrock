@@ -65,6 +65,7 @@ set(Sources
     src/modules/ComputeCoordinates.cpp
     src/modules/SumFluxHydro.cpp
     src/modules/SumFluxDust.cpp
+    src/modules/SumFluxGasPassiveScalars.cpp
     src/SolverConfig.cpp
 )
 

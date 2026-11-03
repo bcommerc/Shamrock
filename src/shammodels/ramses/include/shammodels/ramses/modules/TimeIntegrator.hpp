@@ -48,6 +48,10 @@ namespace shammodels::basegodunov::modules {
 
         void forward_euler(Tscal dt);
 
+        /// Forward Euler update of the gas passive scalars (rho s), independent of the drag
+        /// integrator since drag does not change densities
+        void forward_euler_gas_passive_scalars(Tscal dt);
+
         private:
         inline PatchScheduler &scheduler() { return shambase::get_check_ref(context.sched); }
     };

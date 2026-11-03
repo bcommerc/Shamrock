@@ -63,6 +63,7 @@
 #include "shammodels/ramses/modules/ResetExtForceAcc.hpp"
 #include "shammodels/ramses/modules/SlopeLimitedGradient.hpp"
 #include "shammodels/ramses/modules/SumFluxDust.hpp"
+#include "shammodels/ramses/modules/SumFluxGasPassiveScalars.hpp"
 #include "shammodels/ramses/modules/SumFluxHydro.hpp"
 #include "shammodels/ramses/modules/TimeIntegrator.hpp"
 #include "shammodels/ramses/modules/TransformGhostLayer.hpp"
@@ -824,6 +825,12 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
             AMRBlock::block_size * ndust, "dtrho_dust", "dtrho_dust");
         storage.dtrhov_dust = std::make_shared<shamrock::solvergraph::Field<Tvec>>(
             AMRBlock::block_size * ndust, "dtrhov_dust", "dtrhov_dust");
+    }
+
+    if (solver_config.is_gas_passive_scalar_on()) {
+        u32 npscal_gas          = solver_config.npscal_gas_config.npscal_gas;
+        storage.dtrho_gas_pscal = std::make_shared<shamrock::solvergraph::Field<Tscal>>(
+            AMRBlock::block_size * npscal_gas, "dtrho_gas_pscal", "\\partial_t (\\rho s)");
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -1811,6 +1818,26 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::init_solver_graph() {
         solver_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
     }
 
+    if (solver_config.is_gas_passive_scalar_on()) {
+        modules::NodeSumFluxGasPassiveScalars<Tvec, TgridVec> node{
+            AMRBlock::block_size,
+            solver_config.grid_coord_to_pos_fact,
+            solver_config.npscal_gas_config.npscal_gas};
+        node.set_edges(
+            storage.block_counts,
+            storage.cell_graph_edge,
+            storage.block_cell_sizes,
+            storage.cell0block_aabb_lower,
+            storage.flux_pscal_gas_face_xp,
+            storage.flux_pscal_gas_face_xm,
+            storage.flux_pscal_gas_face_yp,
+            storage.flux_pscal_gas_face_ym,
+            storage.flux_pscal_gas_face_zp,
+            storage.flux_pscal_gas_face_zm,
+            storage.dtrho_gas_pscal);
+        solver_sequence.push_back(std::make_shared<decltype(node)>(std::move(node)));
+    }
+
     if (solver_config.has_ext_forces() || solver_config.is_gravity_on()) { // external forces
 
         // The external forces are applied to the state at t^n (patch data without ghosts) before
@@ -2358,6 +2385,11 @@ void shammodels::basegodunov::Solver<Tvec, TgridVec>::evolve_once() {
         drag_integ.enable_expo_drag_integrator(dt_input);
     } else {
         shambase::throw_unimplemented();
+    }
+
+    if (solver_config.is_gas_passive_scalar_on()) {
+        modules::TimeIntegrator dt_integ(context, solver_config, storage);
+        dt_integ.forward_euler_gas_passive_scalars(dt_input);
     }
 
     if (!solver_config.amr_mode.old_amr) {
